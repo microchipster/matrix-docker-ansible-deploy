@@ -179,6 +179,7 @@ Various services that don't fit any other categories.
 | [Matrix Corporal](https://github.com/devture/matrix-corporal) (advanced) | ❌ | Reconciliator and gateway for a managed Matrix server | [Link](docs/configuring-playbook-matrix-corporal.md) |
 | [Matrix.to](https://github.com/matrix-org/matrix.to) | ❌ | Simple URL redirection service for the Matrix ecosystem | [Link](docs/configuring-playbook-matrixto.md) |
 | [Etherpad](https://etherpad.org) | ❌ | Open source collaborative text editor | [Link](docs/configuring-playbook-etherpad.md) |
+| [Matrix Invite Portal](https://github.com/microchipster/matrix-invite-portal) | ❌ | Closed-registration invite portal for non-technical users | [Link](docs/configuring-playbook-invite-portal.md) |
 | [Jitsi](https://jitsi.org/) | ❌ | Open source video-conferencing platform | [Link](docs/configuring-playbook-jitsi.md) |
 | [Cactus Comments](https://cactus.chat) | ❌ | Federated comment system built on Matrix | [Link](docs/configuring-playbook-cactus-comments.md) |
 | [Pantalaimon](https://github.com/matrix-org/pantalaimon) | ❌ | E2EE aware proxy daemon | [Link](docs/configuring-playbook-pantalaimon.md) |

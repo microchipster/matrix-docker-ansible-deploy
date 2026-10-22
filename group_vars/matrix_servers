@@ -584,6 +584,13 @@ devture_systemd_service_manager_services_list_auto: |
     }] if matrix_bridge_mautrix_signal_enabled else [])
     +
     ([{
+      'name': 'matrix-invite-portal.service',
+      'priority': 2000,
+      'restart_necessary': (matrix_invite_portal_restart_necessary | bool),
+      'groups': ['matrix', 'matrix-invite-portal'],
+    }] if matrix_invite_portal_enabled else [])
+    +
+    ([{
       'name': (matrix_bridge_mautrix_meta_messenger_identifier + '.service'),
       'priority': 2000,
       'restart_necessary': (matrix_bridge_mautrix_meta_messenger_restart_necessary | bool),

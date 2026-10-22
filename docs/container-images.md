@@ -155,6 +155,7 @@ Various services that don't fit any other categories.
 | [synapse_auto_compressor](configuring-playbook-synapse-auto-compressor.md) | [mb-saces/rust-synapse-tools](https://gitlab.com/mb-saces/rust-synapse-tools/container_registry) | ❌ | Cli tool that automatically compresses Synapse's `state_groups` database table in background |
 | [Matrix Corporal](configuring-playbook-matrix-corporal.md) (advanced) | [devture/matrix-corporal](https://hub.docker.com/r/devture/matrix-corporal/) | ❌ | Reconciliator and gateway for a managed Matrix server |
 | [Etherpad](configuring-playbook-etherpad.md) | [etherpad/etherpad](https://hub.docker.com/r/etherpad/etherpad/) | ❌ | Open source collaborative text editor |
+| [Matrix Invite Portal](configuring-playbook-invite-portal.md) | Self-building | ❌ | Closed-registration invite portal for non-technical users |
 | [Jitsi](configuring-playbook-jitsi.md) | [jitsi/web](https://github.com/jitsi/docker-jitsi-meet/pkgs/container/web) | ❌ | [Jitsi](https://jitsi.org/) web UI |
 | [Jitsi](configuring-playbook-jitsi.md) | [jitsi/jicofo](https://github.com/jitsi/docker-jitsi-meet/pkgs/container/jicofo) | ❌ | [Jitsi](https://jitsi.org/) Focus component |
 | [Jitsi](configuring-playbook-jitsi.md) | [jitsi/prosody](https://github.com/jitsi/docker-jitsi-meet/pkgs/container/prosody) | ❌ | [Jitsi](https://jitsi.org/) Prosody XMPP server component |
