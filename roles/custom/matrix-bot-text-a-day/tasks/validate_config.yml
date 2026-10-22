@@ -1,0 +1,126 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+- name: (Deprecation) Catch and report renamed text-a-day variables
+  ansible.builtin.fail:
+    msg: >-
+      Your configuration contains a variable, which now has a different name.
+      Please rename the variable (`{{ item.old }}` -> `{{ item.new }}`) on your configuration file (vars.yml).
+  when: "lookup('ansible.builtin.varnames', ('^' + item.old + '$'), wantlist=True) | length > 0"
+  with_items:
+    - {'old': 'matrix_bot_text_a_day_container_src_repo', 'new': 'matrix_bot_text_a_day_container_image_self_build_repo'}
+    - {'old': 'matrix_bot_text_a_day_container_src_repo_version', 'new': 'matrix_bot_text_a_day_container_image_self_build_branch'}
+    - {'old': 'matrix_bot_text_a_day_container_image_force_pull', 'new': '<removed> (the new community.docker.docker_image_pull module handles this natively)'}
+
+- name: Fail if the homeserver URL is not configured
+  ansible.builtin.fail:
+    msg: "You need to define `matrix_bot_text_a_day_config_homeserver_url`."
+  when: matrix_bot_text_a_day_config_homeserver_url | string | trim | length == 0
+
+- name: Fail if the bot user ID is not configured
+  ansible.builtin.fail:
+    msg: "You need to define `matrix_bot_text_a_day_config_user_id`."
+  when: matrix_bot_text_a_day_config_user_id | string | trim | length == 0
+
+- name: Fail if neither a password nor an access token is configured
+  ansible.builtin.fail:
+    msg: >-
+      You need to define `matrix_bot_text_a_day_config_user_password` or
+      `matrix_bot_text_a_day_matrix_access_token` so the bot can authenticate.
+  when: >-
+    (matrix_bot_text_a_day_config_user_password | default('', true) | string | trim | length == 0)
+    and (matrix_bot_text_a_day_matrix_access_token | default('', true) | string | trim | length == 0)
+
+- name: Fail if the crypto pickle key is not configured
+  ansible.builtin.fail:
+    msg: "You need to define `matrix_bot_text_a_day_matrix_crypto_pickle_key`."
+  when: matrix_bot_text_a_day_matrix_crypto_pickle_key | string | trim | length == 0
+
+- name: Fail if removed singular or provider-specific AI variables are configured
+  ansible.builtin.fail:
+    msg: >-
+      Singular or provider-specific Text A Day AI variables were removed. Use list variables
+      `matrix_bot_text_a_day_ai_models`, `matrix_bot_text_a_day_ai_urls`,
+      `matrix_bot_text_a_day_quote_ai_models`, and `matrix_bot_text_a_day_quote_ai_urls` instead.
+  when: >-
+    matrix_bot_text_a_day_ai_model is defined
+    or matrix_bot_text_a_day_ai_url is defined
+    or matrix_bot_text_a_day_quote_ai_model is defined
+    or matrix_bot_text_a_day_quote_ai_url is defined
+    or matrix_bot_text_a_day_quote_ai_fallback_model is defined
+    or matrix_bot_text_a_day_openrouter_api_key is defined
+    or matrix_bot_text_a_day_openrouter_model is defined
+    or matrix_bot_text_a_day_openrouter_base_url is defined
+    or matrix_bot_text_a_day_quote_openrouter_api_key is defined
+    or matrix_bot_text_a_day_quote_openrouter_model is defined
+    or matrix_bot_text_a_day_quote_openrouter_fallback_model is defined
+    or matrix_bot_text_a_day_quote_openrouter_base_url is defined
+
+- name: Fail if public room administrators are not configured
+  ansible.builtin.fail:
+    msg: "`matrix_bot_text_a_day_public_admin_user_ids` must contain at least one Matrix user ID."
+  when: matrix_bot_text_a_day_public_admin_user_ids | default([]) | length == 0
+
+- name: Fail if Text A Day AI URLs or models are missing
+  ansible.builtin.fail:
+    msg: >-
+      You must define `matrix_bot_text_a_day_ai_urls` and `matrix_bot_text_a_day_ai_models` when
+      `matrix_bot_text_a_day_ai_api_key` is configured. URLs must point to
+      OpenAI-compatible `/v1` API endpoints.
+  when: >-
+    matrix_bot_text_a_day_ai_api_key | string | trim | length > 0
+    and (
+      (matrix_bot_text_a_day_ai_urls | default([]) | length == 0)
+      or (matrix_bot_text_a_day_ai_models | default([]) | length == 0)
+    )
+
+- name: Fail if quote AI URLs or models are missing
+  ansible.builtin.fail:
+    msg: >-
+      You must define `matrix_bot_text_a_day_quote_ai_urls` and `matrix_bot_text_a_day_quote_ai_models` when
+      `matrix_bot_text_a_day_quote_ai_api_key` is configured. URLs must point to
+      OpenAI-compatible `/v1` API endpoints.
+  when: >-
+    matrix_bot_text_a_day_quote_ai_api_key | string | trim | length > 0
+    and (
+      (matrix_bot_text_a_day_quote_ai_urls | default([]) | length == 0)
+      or (matrix_bot_text_a_day_quote_ai_models | default([]) | length == 0)
+    )
+
+- name: Fail if the quote corpus host path is not configured
+  ansible.builtin.fail:
+    msg: >-
+      You must define `matrix_bot_text_a_day_quote_corpus_server_path` with the
+      exact path to your downloaded quote CSV. The quote corpus is not shipped
+      by this role.
+  when: matrix_bot_text_a_day_quote_corpus_server_path | string | trim | length == 0
+
+- name: Check the configured quote corpus host path
+  ansible.builtin.stat:
+    path: "{{ matrix_bot_text_a_day_quote_corpus_server_path }}"
+  register: matrix_bot_text_a_day_quote_corpus_stat
+  when: matrix_bot_text_a_day_quote_corpus_server_path | string | trim | length > 0
+
+- name: Fail if the configured quote corpus is missing or empty
+  ansible.builtin.fail:
+    msg: >-
+      Quote corpus not usable at
+      `{{ matrix_bot_text_a_day_quote_corpus_server_path }}`. Download the CSV
+      and point the variable at the exact file.
+  when: >-
+    matrix_bot_text_a_day_quote_corpus_stat.stat.exists | default(false) | bool is sameas false
+    or matrix_bot_text_a_day_quote_corpus_stat.stat.isreg | default(false) | bool is sameas false
+    or matrix_bot_text_a_day_quote_corpus_stat.stat.size | default(0, true) | int == 0
+
+- name: Fail if both word histogram sources are configured
+  ansible.builtin.fail:
+    msg: >-
+      Configure at most one of
+      `matrix_bot_text_a_day_word_histogram_server_path` or
+      `matrix_bot_text_a_day_word_histogram_url`.
+  when: >-
+    (matrix_bot_text_a_day_word_histogram_server_path | string | trim | length > 0)
+    and (matrix_bot_text_a_day_word_histogram_url | string | trim | length > 0)

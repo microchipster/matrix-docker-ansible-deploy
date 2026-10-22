@@ -65,3 +65,58 @@ postgres_connection_password: ''
 # matrix_synapse_limit_remote_rooms_enabled: true
 # matrix_synapse_limit_remote_rooms_complexity: 1.0
 # matrix_synapse_limit_remote_rooms_admins_can_join: false
+
+# Quote corpus is deliberately not shipped with text-a-day repo/image.
+# Download it yourself, review its licensing/terms, then point this variable
+# at the exact CSV path on the Matrix host. Deployment fails if this path is
+# missing, empty, or not a regular file. The role copies it into the bot's
+# managed data directory using the source file's basename. The container reads
+# it as /data/<basename>.
+# Source and attribution details:
+# - https://huggingface.co/datasets/jstet/quotes-500k
+# - Taken from Kaggle: https://www.kaggle.com/datasets/manann/quotes-500k?resource=download
+# - Original repository: https://github.com/ShivaliGoel/Quotes-500K
+# - Paper: Goel, S., Madhok, R., & Garg, S. (2018). Proposing Contextually
+#   Relevant Quotes for Images. Advances in Information Retrieval. Springer.
+#   https://doi.org/10.1007/978-3-319-76941-7_49
+# Verify and preserve applicable dataset/source licenses yourself.
+# Example:
+# matrix_bot_text_a_day_quote_corpus_server_path: /matrix/shared/text-a-day/quotes-500k.csv
+
+# Dictionary DB downloads once from frozen Poet Assistant URL into
+# `{{ matrix_bot_text_a_day_data_path }}/dictionary.db`. Delete that file to
+# refresh it on next deploy.
+
+# Optional personal word histogram for the shared word-of-the-day stream.
+# Treat this as a known-word / familiarity hint file, not a rarity booster.
+# If you omit it now and add it later, redeploy picks it up.
+# If you change it later, redeploy replaces the cached copy.
+# Format may be CSV (`word,count`) or JSON (`{"word": count}` or `["word":...,"count":...]`).
+# Example generator script: `text-a-day/examples/build-word-histogram.py`.
+# matrix_bot_text_a_day_word_histogram_server_path: /path/to/your/word_histogram.csv
+# matrix_bot_text_a_day_word_histogram_url: https://example.com/word-histogram.json
+
+# Public daily streams are created in this public space and owned by these
+# Matrix users. Set at least one real administrator MXID. Each listed human
+# administrator receives a shared-space invite and an encrypted DM from the bot
+# after deployment; send `help` there to manage Text A Day. Public visibility
+# also requires your homeserver's room-directory policy to allow publication.
+# Administrators can use `join <stream-id> <user-id>` to invite users to a
+# stream and its space.
+# matrix_bot_text_a_day_public_admin_user_ids:
+#   - "@alice:example.com"
+#   - "@bob:example.com"
+
+# Optional OpenAI-compatible API settings for Text A Day summaries and quote
+# quality filtering. Set URLs explicitly when enabling AI features.
+# matrix_bot_text_a_day_ai_api_key: YOUR_AI_API_KEY
+# matrix_bot_text_a_day_ai_models:
+#   - YOUR_MODEL_ID
+#   - YOUR_FALLBACK_MODEL_ID
+# matrix_bot_text_a_day_ai_urls:
+#   - https://your-ai-service.example/v1
+# matrix_bot_text_a_day_quote_ai_api_key: YOUR_QUOTE_AI_API_KEY
+# matrix_bot_text_a_day_quote_ai_models:
+#   - YOUR_QUOTE_MODEL_ID
+# matrix_bot_text_a_day_quote_ai_urls:
+#   - https://your-quote-ai-service.example/v1
