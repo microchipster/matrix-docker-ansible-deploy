@@ -49,6 +49,10 @@
     GIT_CONFIG_KEY_0: safe.directory
     GIT_CONFIG_VALUE_0: "{{ matrix_matrixto_container_image_self_build_src_files_path }}"
   register: matrix_matrixto_git_pull_results
+  # The repository is served by a Radicle seed gateway, which is known to fail transiently.
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: matrix_matrixto_git_pull_results is not failed
 
 - name: Ensure Matrix.to container image is built
   community.docker.docker_image_build:
