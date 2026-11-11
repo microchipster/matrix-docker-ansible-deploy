@@ -251,6 +251,8 @@ Various services that don't fit any other categories.
 
 - [Setting up Etherpad](configuring-playbook-etherpad.md)
 
+- [Setting up Matrix Invite Portal](configuring-playbook-invite-portal.md) — a closed-registration invite portal for non-technical users
+
 - [Setting up the Jitsi video-conferencing platform](configuring-playbook-jitsi.md)
 
 - [Setting up Cactus Comments](configuring-playbook-cactus-comments.md) — a federated comment system built on Matrix

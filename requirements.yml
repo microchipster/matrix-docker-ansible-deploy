@@ -44,6 +44,9 @@
 - src: git+https://github.com/mother-of-all-self-hosting/ansible-role-jitsi.git
   version: v11248-7
   name: jitsi
+- src: git+https://github.com/microchipster/matrix-invite-portal.git
+  version: main
+  name: matrix-invite-portal
 - src: git+https://github.com/mother-of-all-self-hosting/ansible-role-livekit-server.git
   version: v1.13.11-0
   name: livekit_server
