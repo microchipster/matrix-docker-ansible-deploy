@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+- name: Fail if required mautrix-android-sms-mms settings not defined
+  ansible.builtin.fail:
+    msg: >-
+      You need to define a required configuration setting (`{{ item.name }}`).
+  when: "item.when | bool and lookup('vars', item.name, default='') | string | length == 0"
+  with_items:
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_appservice_token', when: true}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_homeserver_address', when: true}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_homeserver_token', when: true}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_database_hostname', when: "{{ matrix_bridge_mautrix_android_sms_mms_database_engine == 'postgres' }}"}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_container_network', when: true}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_metrics_proxying_hostname', when: "{{ matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled }}"}
+    - {'name': 'matrix_bridge_mautrix_android_sms_mms_metrics_proxying_path_prefix', when: "{{ matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled }}"}

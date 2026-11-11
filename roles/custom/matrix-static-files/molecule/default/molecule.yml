@@ -88,6 +88,9 @@ provisioner:
         matrix_static_files_file_matrix_client_property_org_matrix_msc4143_rtc_foci_custom:
           - type: livekit
             livekit_service_url: https://livekit.molecule.invalid
+        matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_custom:
+          url: https://bridge.molecule.invalid
+          protocol_version: 1
         matrix_static_files_file_matrix_client_configuration_extension_json: |
           {
             "m.homeserver": {

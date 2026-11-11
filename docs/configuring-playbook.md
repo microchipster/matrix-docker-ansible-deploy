@@ -162,6 +162,8 @@ Bridges can be used to connect your Matrix installation with third-party communi
 
 - [Setting up Mautrix Signal bridging](configuring-playbook-bridge-mautrix-signal.md)
 
+- [Setting up Mautrix Android SMS/MMS bridging](configuring-playbook-bridge-mautrix-android-sms-mms.md)
+
 - [Setting up Mautrix wsproxy for bridging Android SMS or Apple iMessage](configuring-playbook-bridge-mautrix-wsproxy.md)
 
 - [Setting up RustPush (iMessage) bridging](configuring-playbook-bridge-rustpush.md)
@@ -260,6 +262,8 @@ Various services that don't fit any other categories.
 - [Setting up the Sygnal push gateway](configuring-playbook-sygnal.md)
 
 - [Setting up the ntfy push notifications server](configuring-playbook-ntfy.md)
+
+- [Setting up the Android SMS/MMS agent](configuring-playbook-android-sms-mms-agent.md) — the phone host side of the [Mautrix Android SMS/MMS bridge](configuring-playbook-bridge-mautrix-android-sms-mms.md)
 
 ### Deprecated / unmaintained / removed services
 
