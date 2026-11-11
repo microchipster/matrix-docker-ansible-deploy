@@ -1,0 +1,455 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+# Processes a single entry of `matrix_playbook_image_preload_components`.
+# The entry is expected in the `item` loop variable.
+
+- name: Validate the image preloading entry ({{ item.name | default('?') }})
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.repo_url is defined
+      - item.version is defined
+      - item.image is defined
+      - item.host_src_files_path is defined
+    fail_msg: "matrix_playbook_image_preload: an entry of `matrix_playbook_image_preload_components` is missing required keys (name, repo_url, version, image, host_src_files_path)."
+
+- name: Fail if the server architecture is unsupported ({{ item.name }})
+  ansible.builtin.assert:
+    that:
+      - matrix_playbook_image_preload_target_platform | length > 0
+    fail_msg: >-
+      matrix_playbook_image_preload: {{ item.name }}: unsupported server architecture `{{ matrix_architecture }}` (expected `amd64`, `arm64` or `arm32`).
+      Set `{{ item.preload_toggle | default('matrix_playbook_image_preload_enabled') }}` to `false` to build the image on the server instead.
+
+- name: Set the controller checkout directory ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_local_checkout_dir: "{{ matrix_playbook_image_preload_controller_checkout_root }}/{{ item.name }}"
+
+- name: Ensure the controller checkout root directory exists ({{ item.name }})
+  ansible.builtin.file:
+    path: "{{ matrix_playbook_image_preload_controller_checkout_root }}"
+    state: directory
+    mode: '0750'
+  delegate_to: 127.0.0.1
+  become: false
+
+- name: Ensure the component repository is checked out on the controller ({{ item.name }})
+  ansible.builtin.git:
+    repo: "{{ item.repo_url }}"
+    version: "{{ item.version }}"
+    dest: "{{ matrix_playbook_image_preload_local_checkout_dir }}"
+    force: true
+  delegate_to: 127.0.0.1
+  become: false
+  register: matrix_playbook_image_preload_local_git_result
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: matrix_playbook_image_preload_local_git_result is not failed
+
+- name: Read the controller checkout HEAD commit ({{ item.name }})
+  ansible.builtin.command:
+    cmd: "git -C '{{ matrix_playbook_image_preload_local_checkout_dir }}' rev-parse HEAD"  # noqa command-instead-of-module
+  delegate_to: 127.0.0.1
+  become: false
+  register: matrix_playbook_image_preload_local_head_result
+  changed_when: false
+
+- name: Set the local commit ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_local_commit: "{{ matrix_playbook_image_preload_local_head_result.stdout | trim }}"
+
+- name: Read the local image commit label ({{ item.name }})
+  ansible.builtin.command:
+    cmd: >-
+      {{ matrix_playbook_image_preload_docker_command }} image inspect
+      --format '{{ '{{' }} json .Config.Labels {{ '}}' }}'
+      '{{ item.image }}'
+  delegate_to: 127.0.0.1
+  become: false
+  register: matrix_playbook_image_preload_local_image_inspect_result
+  changed_when: false
+  failed_when: false
+
+- name: Determine the commit the local image was built from ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_local_image_commit: >-
+      {{
+        ((((matrix_playbook_image_preload_local_image_inspect_result.stdout | trim) or '{}') | from_json) | default({}, true)).get('org.matrix.playbook.image-preload.commit', '')
+        if (matrix_playbook_image_preload_local_image_inspect_result.rc | int) == 0
+        else ''
+      }}
+
+- name: Determine whether the local image needs to be built ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_local_image_build_needed: >-
+      {{
+        (matrix_playbook_image_preload_local_image_inspect_result.rc | int) != 0
+        or matrix_playbook_image_preload_local_image_commit != matrix_playbook_image_preload_local_commit
+      }}
+
+- name: Determine the platform to build for ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_build_platform: "{{ item.platform | default(matrix_playbook_image_preload_target_platform) }}"
+
+- name: Determine the Dockerfile path used for the local build ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_dockerfile_path: >-
+      {{
+        (item.dockerfile | default('Dockerfile'))
+        if (item.dockerfile | default('Dockerfile')).startswith('/')
+        else matrix_playbook_image_preload_local_checkout_dir ~ '/' ~ (item.dockerfile | default('Dockerfile'))
+      }}
+
+- name: Report a cross-architecture build ({{ item.name }})
+  ansible.builtin.debug:
+    msg: >-
+      matrix_playbook_image_preload: {{ item.name }}: the server runs `{{ matrix_playbook_image_preload_target_platform }}` while the controller is
+      `{{ matrix_playbook_image_preload_controller_platform | default('unknown') }}`; building with `--platform {{ matrix_playbook_image_preload_build_platform }}`,
+      which requires emulation on the controller.
+  when:
+    - matrix_playbook_image_preload_local_image_build_needed | bool
+    - matrix_playbook_image_preload_build_platform != matrix_playbook_image_preload_controller_platform
+
+# Builds run with host networking on the controller, so they do not depend
+# on the controller's Docker default bridge being usable.
+- name: Prepare the local image build command ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_build_command: >-
+      {{ matrix_playbook_image_preload_docker_command }} build
+      --network=host
+      --tag '{{ item.image }}'
+      {{ ('--platform ' ~ matrix_playbook_image_preload_build_platform) if matrix_playbook_image_preload_build_platform != matrix_playbook_image_preload_controller_platform else '' }}
+      --pull
+      --file '{{ matrix_playbook_image_preload_dockerfile_path }}'
+      --label 'org.matrix.playbook.image-preload.commit={{ matrix_playbook_image_preload_local_commit }}'
+      '{{ matrix_playbook_image_preload_local_checkout_dir }}'
+  when: matrix_playbook_image_preload_local_image_build_needed | bool
+
+- name: Build the container image on the controller ({{ item.name }})
+  ansible.builtin.command:
+    cmd: "{{ matrix_playbook_image_preload_build_command }}"
+  delegate_to: 127.0.0.1
+  become: false
+  register: matrix_playbook_image_preload_build_result
+  changed_when: true
+  when: matrix_playbook_image_preload_local_image_build_needed | bool
+
+- name: Read the local image layers ({{ item.name }})
+  ansible.builtin.command:
+    cmd: >-
+      {{ matrix_playbook_image_preload_docker_command }} image inspect
+      --format '{{ '{{' }} json .RootFS.Layers {{ '}}' }}'
+      '{{ item.image }}'
+  delegate_to: 127.0.0.1
+  become: false
+  register: matrix_playbook_image_preload_local_layers_result
+  changed_when: false
+
+- name: Ensure the server-side repository path exists ({{ item.name }})
+  ansible.builtin.file:
+    path: "{{ item.host_src_files_path }}"
+    state: directory
+    owner: "{{ matrix_user_name }}"
+    group: "{{ matrix_group_name }}"
+    mode: '0750'
+
+- name: Ensure the server-side repository ownership is correct ({{ item.name }})
+  ansible.builtin.file:
+    path: "{{ item.host_src_files_path }}"
+    state: directory
+    owner: "{{ matrix_user_name }}"
+    group: "{{ matrix_group_name }}"
+    recurse: true
+
+- name: Ensure the repository is present on the server at the expected commit ({{ item.name }})
+  ansible.builtin.git:
+    repo: "{{ item.repo_url }}"
+    version: "{{ item.version }}"
+    dest: "{{ item.host_src_files_path }}"
+    force: true
+  become: true
+  become_user: "{{ matrix_user_name }}"
+  environment:
+    GIT_CONFIG_COUNT: "1"
+    GIT_CONFIG_KEY_0: safe.directory
+    GIT_CONFIG_VALUE_0: "{{ item.host_src_files_path }}"
+  register: matrix_playbook_image_preload_git_result
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: matrix_playbook_image_preload_git_result is not failed
+
+- name: Read the server-side repository HEAD commit ({{ item.name }})
+  ansible.builtin.command:
+    cmd: "git -C '{{ item.host_src_files_path }}' rev-parse HEAD"  # noqa command-instead-of-module
+  environment:
+    GIT_CONFIG_COUNT: "1"
+    GIT_CONFIG_KEY_0: safe.directory
+    GIT_CONFIG_VALUE_0: "{{ item.host_src_files_path }}"
+  register: matrix_playbook_image_preload_host_head_result
+  changed_when: false
+
+- name: Fail if the server-side repository is not at the local commit ({{ item.name }})
+  ansible.builtin.assert:
+    that:
+      - matrix_playbook_image_preload_host_head_result.stdout | trim == matrix_playbook_image_preload_local_commit
+    fail_msg: >-
+      matrix_playbook_image_preload: {{ item.name }}: after checking out, the server's repository is at
+      {{ matrix_playbook_image_preload_host_head_result.stdout | trim }} instead of {{ matrix_playbook_image_preload_local_commit }}.
+      This can happen when the remote changed while deploying. Re-run the playbook to retry.
+
+- name: Read the server-side image layers ({{ item.name }})
+  ansible.builtin.command:
+    cmd: >-
+      {{ devture_systemd_docker_base_host_command_docker }} image inspect
+      --format '{{ '{{' }} json .RootFS.Layers {{ '}}' }}'
+      '{{ item.image }}'
+  register: matrix_playbook_image_preload_host_layers_result
+  changed_when: false
+  failed_when: false
+
+- name: Determine whether the image needs to be transferred to the server ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_transfer_needed: >-
+      {{
+        (matrix_playbook_image_preload_host_layers_result.rc | int) != 0
+        or (matrix_playbook_image_preload_host_layers_result.stdout | trim) != (matrix_playbook_image_preload_local_layers_result.stdout | trim)
+      }}
+
+- name: Determine the service unit to restart ({{ item.name }})
+  ansible.builtin.set_fact:
+    matrix_playbook_image_preload_service_unit: >-
+      {{
+        item.service_name
+        if item.service_name is defined
+        else ('matrix-' ~ item.service ~ '.service' if item.service is defined else '')
+      }}
+
+- name: Transfer the container image to the server ({{ item.name }})
+  block:
+    - name: Ensure the image transfer directory exists on the server ({{ item.name }})
+      ansible.builtin.file:
+        path: "{{ matrix_playbook_image_preload_host_temp_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Create a temporary file for the image archive on the controller ({{ item.name }})
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .tar
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_controller_tempfile_result
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Save the image to an archive on the controller ({{ item.name }})
+      ansible.builtin.command:
+        cmd: "{{ matrix_playbook_image_preload_docker_command }} image save --output '{{ matrix_playbook_image_preload_controller_tempfile_result.path }}' '{{ item.image }}'"
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_save_result
+      changed_when: true
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Check if the controller has zstd ({{ item.name }})
+      ansible.builtin.command:
+        cmd: zstd --version
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_controller_zstd_result
+      changed_when: false
+      failed_when: false
+      when:
+        - matrix_playbook_image_preload_transfer_needed | bool
+        - matrix_playbook_image_preload_transfer_compressor == 'auto'
+
+    - name: Check if the server has zstd ({{ item.name }})
+      ansible.builtin.command:
+        cmd: zstd --version
+      register: matrix_playbook_image_preload_host_zstd_result
+      changed_when: false
+      failed_when: false
+      when:
+        - matrix_playbook_image_preload_transfer_needed | bool
+        - matrix_playbook_image_preload_transfer_compressor == 'auto'
+
+    - name: Determine the transfer compression ({{ item.name }})
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_effective_compressor: >-
+          {{
+            matrix_playbook_image_preload_transfer_compressor
+            if matrix_playbook_image_preload_transfer_compressor in ['zstd', 'gzip', 'none']
+            else ('zstd' if (matrix_playbook_image_preload_controller_zstd_result.rc | default(1)) == 0 and (matrix_playbook_image_preload_host_zstd_result.rc | default(1)) == 0 else 'gzip')
+          }}
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Compress the image archive with zstd on the controller ({{ item.name }})
+      ansible.builtin.command:
+        cmd: "zstd -T0 -3 -f -q -o '{{ matrix_playbook_image_preload_controller_tempfile_result.path }}.zst' '{{ matrix_playbook_image_preload_controller_tempfile_result.path }}'"
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_zstd_result
+      changed_when: true
+      when:
+        - matrix_playbook_image_preload_transfer_needed | bool
+        - matrix_playbook_image_preload_effective_compressor == 'zstd'
+
+    - name: Compress the image archive with gzip on the controller ({{ item.name }})
+      ansible.builtin.shell:
+        cmd: "gzip -1 -c '{{ matrix_playbook_image_preload_controller_tempfile_result.path }}' > '{{ matrix_playbook_image_preload_controller_tempfile_result.path }}.gz'"
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_gzip_result
+      changed_when: true
+      when:
+        - matrix_playbook_image_preload_transfer_needed | bool
+        - matrix_playbook_image_preload_effective_compressor == 'gzip'
+
+    - name: Set the image archive to transfer ({{ item.name }})
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_transfer_archive: >-
+          {{
+            matrix_playbook_image_preload_controller_tempfile_result.path ~ '.zst' if matrix_playbook_image_preload_effective_compressor == 'zstd'
+            else matrix_playbook_image_preload_controller_tempfile_result.path ~ '.gz' if matrix_playbook_image_preload_effective_compressor == 'gzip'
+            else matrix_playbook_image_preload_controller_tempfile_result.path
+          }}
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Create a temporary file for the image archive on the server ({{ item.name }})
+      ansible.builtin.tempfile:
+        state: file
+        path: "{{ matrix_playbook_image_preload_host_temp_dir }}"
+      register: matrix_playbook_image_preload_host_tempfile_result
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Copy the image archive to the server ({{ item.name }})
+      ansible.builtin.copy:
+        src: "{{ matrix_playbook_image_preload_transfer_archive }}"
+        dest: "{{ matrix_playbook_image_preload_host_tempfile_result.path }}"
+        mode: '0600'
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Load the container image on the server ({{ item.name }})
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail &&
+          {{ 'zstd -dc' if matrix_playbook_image_preload_effective_compressor == 'zstd' else ('gzip -dc' if matrix_playbook_image_preload_effective_compressor == 'gzip' else 'cat') }}
+          '{{ matrix_playbook_image_preload_host_tempfile_result.path }}'
+          | {{ devture_systemd_docker_base_host_command_docker }} load
+        executable: /bin/bash
+      register: matrix_playbook_image_preload_load_result
+      changed_when: true
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Read the loaded image layers on the server ({{ item.name }})
+      ansible.builtin.command:
+        cmd: >-
+          {{ devture_systemd_docker_base_host_command_docker }} image inspect
+          --format '{{ '{{' }} json .RootFS.Layers {{ '}}' }}'
+          '{{ item.image }}'
+      register: matrix_playbook_image_preload_host_layers_after_result
+      changed_when: false
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Read the loaded image commit label on the server ({{ item.name }})
+      ansible.builtin.command:
+        cmd: >-
+          {{ devture_systemd_docker_base_host_command_docker }} image inspect
+          --format '{{ '{{' }} json .Config.Labels {{ '}}' }}'
+          '{{ item.image }}'
+      register: matrix_playbook_image_preload_host_image_inspect_result
+      changed_when: false
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Set the commit the loaded image was built from ({{ item.name }})
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_host_image_commit: >-
+          {{
+            ((((matrix_playbook_image_preload_host_image_inspect_result.stdout | trim) or '{}') | from_json) | default({}, true)).get('org.matrix.playbook.image-preload.commit', '')
+          }}
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Fail if the loaded image does not match the local image ({{ item.name }})
+      ansible.builtin.assert:
+        that:
+          - matrix_playbook_image_preload_host_layers_after_result.stdout | trim == matrix_playbook_image_preload_local_layers_result.stdout | trim
+          - matrix_playbook_image_preload_host_image_commit == matrix_playbook_image_preload_local_commit
+        fail_msg: >-
+          matrix_playbook_image_preload: {{ item.name }}: the image loaded on the server does not match the locally built image
+          (commit {{ matrix_playbook_image_preload_local_commit }}). Check the Docker daemon/context used by Ansible and by systemd at runtime.
+      when: matrix_playbook_image_preload_transfer_needed | bool
+
+    - name: Check whether the service is installed on the server ({{ item.name }})
+      ansible.builtin.stat:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ matrix_playbook_image_preload_service_unit }}"
+      register: matrix_playbook_image_preload_service_stat_result
+      when:
+        - matrix_playbook_image_preload_transfer_needed | bool
+        - matrix_playbook_image_preload_service_unit | length > 0
+
+    # A service can fail its first start attempt right after the image is loaded
+    # (e.g. while the previous container is still settling). Services are configured
+    # to be restarted automatically by systemd, so wait for the service to come up
+    # instead of failing the whole playbook run.
+    - block:
+        - name: Restart the service so it picks up the loaded image ({{ item.name }})
+          ansible.builtin.service:
+            name: "{{ matrix_playbook_image_preload_service_unit }}"
+            state: restarted
+          register: matrix_playbook_image_preload_service_restart_result
+          when:
+            - matrix_playbook_image_preload_transfer_needed | bool
+            - matrix_playbook_image_preload_service_unit | length > 0
+            - matrix_playbook_image_preload_service_stat_result.stat.exists | default(false)
+      rescue:
+        - name: Wait for the service to come up ({{ item.name }})
+          ansible.builtin.service_facts:
+          register: matrix_playbook_image_preload_service_facts_result
+          retries: 12
+          delay: 5
+          until: >-
+            matrix_playbook_image_preload_service_facts_result.ansible_facts.services[matrix_playbook_image_preload_service_unit] is defined
+            and matrix_playbook_image_preload_service_facts_result.ansible_facts.services[matrix_playbook_image_preload_service_unit].state == 'running'
+
+        - name: Report the recovered service start ({{ item.name }})
+          ansible.builtin.debug:
+            msg: >-
+              matrix_playbook_image_preload: {{ item.name }}: the service restart reported a failure
+              (`{{ matrix_playbook_image_preload_service_restart_result.msg | default('unknown error') }}`)
+              but the service is active again; systemd's own restart policy recovered it.
+
+    - name: Report the loaded image ({{ item.name }})
+      ansible.builtin.debug:
+        msg: "matrix_playbook_image_preload: loaded `{{ item.image }}` on the server (commit {{ matrix_playbook_image_preload_local_commit }})."
+      when: matrix_playbook_image_preload_transfer_needed | bool
+  always:
+    - name: Remove temporary image archives on the controller ({{ item.name }})
+      ansible.builtin.file:
+        path: "{{ archive_path }}"
+        state: absent
+      delegate_to: 127.0.0.1
+      become: false
+      loop:
+        - "{{ matrix_playbook_image_preload_controller_tempfile_result.path | default('') }}"
+        - "{{ matrix_playbook_image_preload_controller_tempfile_result.path | default('') }}.zst"
+        - "{{ matrix_playbook_image_preload_controller_tempfile_result.path | default('') }}.gz"
+      loop_control:
+        loop_var: archive_path
+      when:
+        - matrix_playbook_image_preload_transfer_needed | default(false) | bool
+        - matrix_playbook_image_preload_controller_tempfile_result is defined
+        - matrix_playbook_image_preload_controller_tempfile_result.path | default('') | length > 0
+
+    - name: Remove the temporary image archive on the server ({{ item.name }})
+      ansible.builtin.file:
+        path: "{{ matrix_playbook_image_preload_host_tempfile_result.path }}"
+        state: absent
+      when:
+        - matrix_playbook_image_preload_transfer_needed | default(false) | bool
+        - matrix_playbook_image_preload_host_tempfile_result is defined
+        - matrix_playbook_image_preload_host_tempfile_result.path | default('') | length > 0

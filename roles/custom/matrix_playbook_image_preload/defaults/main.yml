@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+# This role builds the container images of self-building components on the machine running
+# Ansible (the controller) and copies them to the server, so that the components' roles
+# find their image already present and skip building it on the server.
+#
+# See docs/local-image-preloading.md.
+
+# Controls whether local image preloading runs at all.
+#
+# When disabled, components build their images on the server (if they are configured for self-building).
+matrix_playbook_image_preload_enabled: true
+
+# The Docker command to use on the controller for building, saving and inspecting images.
+# Example: "rtk docker"
+matrix_playbook_image_preload_docker_command: docker
+
+# Directory on the controller where the components' repositories are checked out.
+#
+# The role clones and updates each component's repository into this cache directory
+# before building its image. The directory is safe to delete at any time. It respects
+# `$XDG_CACHE_HOME` and falls back to `~/.cache`.
+matrix_playbook_image_preload_controller_checkout_root: "{{ lookup('ansible.builtin.env', 'XDG_CACHE_HOME') | default(lookup('ansible.builtin.env', 'HOME') ~ '/.cache', true) }}/matrix-docker-ansible-deploy/image-preload"
+
+# Controls how image archives are compressed for transfer.
+#
+# One of: auto, zstd, gzip, none.
+# "auto" uses zstd when both the controller and the server have it, gzip otherwise.
+matrix_playbook_image_preload_transfer_compressor: auto
+
+# Directory on the server used while loading image archives.
+matrix_playbook_image_preload_host_temp_dir: "{{ matrix_base_data_path }}/image-preload"
+
+# The components to process. Each entry requires:
+# - `name`: identifier used in messages
+# - `enabled`: whether the component should be processed on this run
+# - `repo_url`, `version`: repository and branch/tag/commit checked out on the controller and the server
+# - `image`: container image tag to build, save and load
+# - `host_src_files_path`: where the server keeps the repository checkout
+#
+# Optional entry keys:
+# - `preload_toggle`: name of the variable that can be set to false to disable preloading, mentioned in failure messages
+# - `dockerfile`: defaults to `Dockerfile`
+# - `platform`: Docker platform override, e.g. `linux/arm64`
+# - `service`: service name used to match `setup-<service>` / `install-<service>` runs and to restart the service
+# - `service_name`: systemd unit name to restart, defaults to `matrix-<service>.service` when `service` is set
+matrix_playbook_image_preload_components_auto: []
+matrix_playbook_image_preload_components_custom: []
+matrix_playbook_image_preload_components: "{{ matrix_playbook_image_preload_components_auto + matrix_playbook_image_preload_components_custom }}"

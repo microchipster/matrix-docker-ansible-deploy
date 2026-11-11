@@ -85,6 +85,55 @@ matrix_playbook_public_client_urls: |
 # or is empty (no redirection) if no such client is enabled.
 matrix_playbook_public_client_root_redirection_url: "{{ matrix_playbook_public_client_urls | first | default('', true) }}"
 
+# Some components' container images are built on the machine running Ansible (the controller)
+# and copied to the server, instead of being built on the server itself.
+#
+# See docs/local-image-preloading.md.
+matrix_playbook_image_preload_components_auto:
+  - name: matrix-bot-robbot
+    enabled: "{{ matrix_bot_robbot_enabled and matrix_bot_robbot_container_image_self_build and matrix_bot_robbot_container_image_preload }}"
+    preload_toggle: matrix_bot_robbot_container_image_preload
+    repo_url: "{{ matrix_bot_robbot_container_repo }}"
+    version: "{{ matrix_bot_robbot_container_repo_version }}"
+    image: "{{ matrix_bot_robbot_container_image }}"
+    host_src_files_path: "{{ matrix_bot_robbot_container_src_files_path }}"
+    service: bot-robbot
+    service_name: matrix-bot-robbot.service
+
+  - name: matrix-bridge-mautrix-jmpchat
+    enabled: "{{ matrix_bridge_mautrix_jmpchat_enabled and matrix_bridge_mautrix_jmpchat_container_image_self_build and matrix_bridge_mautrix_jmpchat_container_image_preload }}"
+    preload_toggle: matrix_bridge_mautrix_jmpchat_container_image_preload
+    repo_url: "{{ matrix_bridge_mautrix_jmpchat_container_image_self_build_repo }}"
+    version: "{{ matrix_bridge_mautrix_jmpchat_container_image_self_build_branch }}"
+    image: "{{ matrix_bridge_mautrix_jmpchat_container_image }}"
+    host_src_files_path: "{{ matrix_bridge_mautrix_jmpchat_container_src_files_path }}"
+    service: mautrix-jmpchat
+    service_name: matrix-mautrix-jmpchat.service
+
+  - name: matrix-bot-text-a-day
+    enabled: "{{ matrix_bot_text_a_day_enabled and matrix_bot_text_a_day_container_image_self_build and matrix_bot_text_a_day_container_image_preload }}"
+    preload_toggle: matrix_bot_text_a_day_container_image_preload
+    repo_url: "{{ matrix_bot_text_a_day_container_image_self_build_repo }}"
+    version: "{{ matrix_bot_text_a_day_container_image_self_build_branch }}"
+    image: "{{ matrix_bot_text_a_day_container_image }}"
+    host_src_files_path: "{{ matrix_bot_text_a_day_container_src_files_path }}"
+    service: bot-text-a-day
+    service_name: matrix-bot-text-a-day.service
+
+  - name: matrix-invite-portal
+    enabled: "{{ matrix_invite_portal_enabled and matrix_invite_portal_container_image_self_build and matrix_invite_portal_container_image_preload }}"
+    preload_toggle: matrix_invite_portal_container_image_preload
+    repo_url: "{{ matrix_invite_portal_container_image_self_build_repo }}"
+    version: "{{ matrix_invite_portal_container_image_self_build_repo_version }}"
+    image: "{{ matrix_invite_portal_container_image }}"
+    host_src_files_path: "{{ matrix_invite_portal_container_src_files_path }}"
+    service: matrix-invite-portal
+    service_name: matrix-invite-portal.service
+
+# The Matrix Invite Portal role is maintained outside this playbook,
+# so its preloading toggle is defined here instead of in the role's defaults.
+matrix_invite_portal_container_image_preload: false
+
 ########################################################################
 #                                                                      #
 # /Playbook                                                            #

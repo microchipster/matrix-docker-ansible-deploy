@@ -55,3 +55,5 @@ Possibly outdated list of roles where self-building the Docker image is currentl
 Adding self-building support to other roles is welcome. Feel free to contribute!
 
 If you'd like **to force self-building** even if an image is available for your architecture, look into the `matrix_*_self_build` variables provided by individual roles.
+
+Images can also be built on the machine running Ansible (the controller) and copied to the server over the Ansible connection, which keeps builds away from production servers and needs no container registry. See [Local image preloading](local-image-preloading.md).

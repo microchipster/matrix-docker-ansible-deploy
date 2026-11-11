@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+- tags:
+    - setup-all
+    - install-all
+    - setup-bot-robbot
+    - install-bot-robbot
+    - setup-mautrix-jmpchat
+    - install-mautrix-jmpchat
+    - setup-bot-text-a-day
+    - install-bot-text-a-day
+    - setup-matrix-invite-portal
+    - install-matrix-invite-portal
+  when: matrix_playbook_image_preload_enabled | bool
+  block:
+    - name: Determine whether all components should be preloaded
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_run_all: "{{ ['all', 'setup-all', 'install-all'] | intersect(ansible_run_tags) | length > 0 }}"
+
+    - name: Validate the transfer compressor
+      ansible.builtin.assert:
+        that:
+          - matrix_playbook_image_preload_transfer_compressor in ['auto', 'zstd', 'gzip', 'none']
+        fail_msg: "matrix_playbook_image_preload: invalid `matrix_playbook_image_preload_transfer_compressor` ('{{ matrix_playbook_image_preload_transfer_compressor }}'). Valid values: auto, zstd, gzip, none."
+
+    - name: Determine the architecture of the controller
+      ansible.builtin.command:
+        cmd: uname -m
+      delegate_to: 127.0.0.1
+      become: false
+      register: matrix_playbook_image_preload_controller_uname_result
+      changed_when: false
+
+    - name: Determine the Docker platform of the controller
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_controller_platform: >-
+          {{
+            'linux/amd64' if matrix_playbook_image_preload_controller_uname_result.stdout == 'x86_64'
+            else ('linux/arm64' if matrix_playbook_image_preload_controller_uname_result.stdout in ['aarch64', 'arm64'] else '')
+          }}
+
+    - name: Determine the Docker platform of the server
+      ansible.builtin.set_fact:
+        matrix_playbook_image_preload_target_platform: >-
+          {{
+            'linux/amd64' if matrix_architecture == 'amd64'
+            else 'linux/arm64' if matrix_architecture == 'arm64'
+            else ('linux/arm/v6' if ansible_facts.architecture == 'armv6l' else 'linux/arm/v7') if matrix_architecture == 'arm32'
+            else ''
+          }}
+
+    - name: Preload container images
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/preload_component.yml"
+      loop: "{{ matrix_playbook_image_preload_components }}"
+      loop_control:
+        label: "{{ item.name | default('?') }}"
+      when:
+        - item.enabled | bool
+        - >-
+          (matrix_playbook_image_preload_run_all | bool)
+          or (('setup-' ~ (item.service | default(''))) in ansible_run_tags)
+          or (('install-' ~ (item.service | default(''))) in ansible_run_tags)
