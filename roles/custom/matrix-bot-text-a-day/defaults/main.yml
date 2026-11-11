@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+matrix_bot_text_a_day_enabled: false
+
+matrix_bot_text_a_day_container_image_self_build: true
+matrix_bot_text_a_day_container_image_self_build_repo: "https://github.com/microchipster/text-a-day.git"
+matrix_bot_text_a_day_container_image_self_build_branch: "{{ 'main' if matrix_bot_text_a_day_version == 'latest' else matrix_bot_text_a_day_version }}"
+
+# Controls whether the container image is built on the machine running Ansible
+# and copied to the server instead of being built on the server (see docs/local-image-preloading.md).
+matrix_bot_text_a_day_container_image_preload: false
+
+matrix_bot_text_a_day_version: latest
+
+matrix_bot_text_a_day_container_image: "{{ matrix_bot_text_a_day_container_image_registry_prefix }}textaday:{{ matrix_bot_text_a_day_container_image_tag }}"
+matrix_bot_text_a_day_container_image_tag: "{{ matrix_bot_text_a_day_version }}"
+matrix_bot_text_a_day_container_image_registry_prefix: "{{ 'localhost/' if matrix_bot_text_a_day_container_image_self_build else matrix_bot_text_a_day_container_image_registry_prefix_upstream }}"
+matrix_bot_text_a_day_container_image_registry_prefix_upstream: "{{ matrix_bot_text_a_day_container_image_registry_prefix_upstream_default }}"
+matrix_bot_text_a_day_container_image_registry_prefix_upstream_default: ""
+
+matrix_bot_text_a_day_base_path: "{{ matrix_base_data_path }}/text-a-day"
+matrix_bot_text_a_day_config_path: "{{ matrix_bot_text_a_day_base_path }}/config"
+matrix_bot_text_a_day_data_path: "{{ matrix_bot_text_a_day_base_path }}/data"
+matrix_bot_text_a_day_container_src_files_path: "{{ matrix_bot_text_a_day_base_path }}/docker-src"
+
+# Required deployment input. Quote corpus is intentionally not shipped in the
+# repository or container image because its licensing must be reviewed by the
+# deployer.
+matrix_bot_text_a_day_quote_corpus_server_path: ""
+
+matrix_bot_text_a_day_container_network: "{{ matrix_addons_container_network }}"
+matrix_bot_text_a_day_container_additional_networks: "{{ (matrix_bot_text_a_day_container_additional_networks_auto + matrix_bot_text_a_day_container_additional_networks_custom) | unique }}"
+matrix_bot_text_a_day_container_additional_networks_auto: []
+matrix_bot_text_a_day_container_additional_networks_custom: []
+matrix_bot_text_a_day_container_extra_arguments: []
+
+matrix_bot_text_a_day_systemd_required_services_list: "{{ matrix_bot_text_a_day_systemd_required_services_list_default + matrix_bot_text_a_day_systemd_required_services_list_auto + matrix_bot_text_a_day_systemd_required_services_list_custom }}"
+matrix_bot_text_a_day_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+matrix_bot_text_a_day_systemd_required_services_list_auto: []
+matrix_bot_text_a_day_systemd_required_services_list_custom: []
+matrix_bot_text_a_day_systemd_wanted_services_list: []
+
+matrix_bot_text_a_day_config_data_dir: /data
+matrix_bot_text_a_day_config_timezone: UTC
+matrix_bot_text_a_day_config_management_room: textaday-management
+matrix_bot_text_a_day_config_shared_space_name: textaday-daily-streams
+matrix_bot_text_a_day_config_shared_space_display_name: "Text a day"
+matrix_bot_text_a_day_config_default_daily_time: "09:00"
+matrix_bot_text_a_day_config_homeserver_server_name: "{{ matrix_domain }}"
+matrix_bot_text_a_day_config_homeserver_url: "{{ matrix_addons_homeserver_client_api_url }}"
+matrix_bot_text_a_day_config_user_mxid_localpart: textaday
+matrix_bot_text_a_day_config_user_id: "@{{ matrix_bot_text_a_day_config_user_mxid_localpart }}:{{ matrix_domain }}"
+matrix_bot_text_a_day_config_user_password: null
+matrix_bot_text_a_day_matrix_crypto_pickle_key: "{{ (matrix_homeserver_generic_secret_key + ':text-a-day.crypto.pickle') | hash('sha512') }}"
+matrix_bot_text_a_day_matrix_access_token: ""
+matrix_bot_text_a_day_matrix_access_token_file_path: "{{ matrix_bot_text_a_day_config_path }}/access_token"
+matrix_bot_text_a_day_matrix_login_network: "{{ matrix_addons_homeserver_container_network if matrix_addons_homeserver_container_network else matrix_bot_text_a_day_container_network }}"
+
+# Bot must retain ownership of public rooms. Add human administrators in vars.yml;
+# each listed human receives a shared-space invite and an encrypted onboarding DM.
+# Listed human administrators receive an encrypted onboarding DM and can manage
+# the bot there. The same users receive power level 100 in public stream rooms.
+matrix_bot_text_a_day_public_admin_user_ids:
+  - "{{ matrix_bot_text_a_day_config_user_id }}"
+
+# Optional OpenAI-compatible API settings for AI summaries of Text A Day.
+# Set API key, list of models, and list of URLs in inventory vars.yml when enabling summaries.
+matrix_bot_text_a_day_ai_api_key: ""
+matrix_bot_text_a_day_ai_models: []
+matrix_bot_text_a_day_ai_urls: []
+
+# Optional OpenAI-compatible API settings for quote quality filtering.
+matrix_bot_text_a_day_quote_ai_api_key: "{{ matrix_bot_text_a_day_ai_api_key }}"
+matrix_bot_text_a_day_quote_ai_models: "{{ matrix_bot_text_a_day_ai_models }}"
+matrix_bot_text_a_day_quote_ai_urls: "{{ matrix_bot_text_a_day_ai_urls }}"
+
+matrix_bot_text_a_day_fixtures_dir: /opt/textaday/fixtures
+matrix_bot_text_a_day_stream_room_ids:
+  text-a-day: ""
+  quote-of-the-day: ""
+  word-of-the-day: ""
+matrix_bot_text_a_day_word_source_path: "{{ matrix_bot_text_a_day_fixtures_dir }}/vocab.csv"
+matrix_bot_text_a_day_word_known_words_path: "{{ matrix_bot_text_a_day_fixtures_dir }}/known_words.txt"
+matrix_bot_text_a_day_word_excluded_path: "{{ matrix_bot_text_a_day_fixtures_dir }}/known_words.txt"
+matrix_bot_text_a_day_word_histogram_path: "{{ matrix_bot_text_a_day_data_path }}/word_histogram.csv"
+matrix_bot_text_a_day_word_histogram_server_path: ""
+matrix_bot_text_a_day_word_histogram_url: ""
+
+matrix_bot_text_a_day_restart_necessary: false

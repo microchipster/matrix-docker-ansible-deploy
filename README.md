@@ -146,6 +146,7 @@ Bots provide various additional functionality to your installation.
 | Name | Default? | Description | Documentation |
 | ---- | -------- | ----------- | ------------- |
 | [baibot](https://github.com/etkecc/baibot) | ❌ | Bot that exposes the power of [AI](https://en.wikipedia.org/wiki/Artificial_intelligence) / [Large Language Models](https://en.wikipedia.org/wiki/Large_language_model) to you | [Link](docs/configuring-playbook-bot-baibot.md) |
+| [Text A Day](https://github.com/microchipster/text-a-day) | ❌ | Scheduled literary text, quote, and vocabulary streams | [Link](docs/configuring-playbook-bot-text-a-day.md) |
 | [matrix-reminder-bot](https://github.com/anoadragon453/matrix-reminder-bot) | ❌ | Bot for scheduling one-off & recurring reminders and alarms | [Link](docs/configuring-playbook-bot-matrix-reminder-bot.md) |
 | [maubot](https://github.com/maubot/maubot) | ❌ | Plugin-based Matrix bot system | [Link](docs/configuring-playbook-bot-maubot.md) |
 | [Honoroit](https://github.com/etkecc/honoroit) | ❌ | Helpdesk bot | [Link](docs/configuring-playbook-bot-honoroit.md) |

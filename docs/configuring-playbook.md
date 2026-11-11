@@ -196,6 +196,8 @@ Bots provide various additional functionality to your installation.
 
 - [Setting up baibot](configuring-playbook-bot-baibot.md) — a bot through which you can talk to various [AI](https://en.wikipedia.org/wiki/Artificial_intelligence) / [Large Language Models](https://en.wikipedia.org/wiki/Large_language_model) services (the privacy-first [Venice](configuring-playbook-bot-baibot.md#venice) we recommend, [OpenAI](https://openai.com/)'s [ChatGPT](https://openai.com/blog/chatgpt/), and [others](https://github.com/etkecc/baibot/blob/main/docs/providers.md))
 
+- [Setting up Text A Day](configuring-playbook-bot-text-a-day.md) — scheduled literary text, quote, and vocabulary streams
+
 - [Setting up matrix-reminder-bot](configuring-playbook-bot-matrix-reminder-bot.md) — a bot to remind you about stuff
 
 - [Setting up maubot](configuring-playbook-bot-maubot.md) — a plugin-based Matrix bot system

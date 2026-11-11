@@ -1,0 +1,52 @@
+#jinja2: lstrip_blocks: True
+[Unit]
+Description=Matrix text-a-day bot
+{% for service in matrix_bot_text_a_day_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+{% for service in matrix_bot_text_a_day_systemd_wanted_services_list %}
+Wants={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ devture_systemd_docker_base_systemd_unit_home_path }}"
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop -t {{ devture_systemd_docker_base_container_stop_grace_time_seconds }} matrix-bot-text-a-day 2>/dev/null || true'
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm matrix-bot-text-a-day 2>/dev/null || true'
+
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
+			--rm \
+			--name=matrix-bot-text-a-day \
+			--log-driver=json-file --log-opt max-size=10m --log-opt max-file=2 \
+			--user={{ matrix_user_uid }}:{{ matrix_user_gid }} \
+			--cap-drop=ALL \
+			--read-only \
+			--network={{ matrix_bot_text_a_day_container_network }} \
+			--mount type=bind,src={{ matrix_bot_text_a_day_config_path }},dst=/config \
+			--mount type=bind,src={{ matrix_bot_text_a_day_data_path }},dst=/data \
+			--tmpfs=/tmp:rw,noexec,nosuid,size=256m \
+			--entrypoint=/usr/bin/textaday \
+			{% for arg in matrix_bot_text_a_day_container_extra_arguments %}
+			{{ arg }} \
+			{% endfor %}
+			{{ matrix_bot_text_a_day_container_image }} \
+			-c /config/config.yaml
+
+{% if matrix_bot_text_a_day_container_network != 'host' %}
+{% for network in matrix_bot_text_a_day_container_additional_networks %}
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} matrix-bot-text-a-day
+{% endfor %}
+{% endif %}
+
+ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach matrix-bot-text-a-day
+
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop -t {{ devture_systemd_docker_base_container_stop_grace_time_seconds }} matrix-bot-text-a-day 2>/dev/null || true'
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm matrix-bot-text-a-day 2>/dev/null || true'
+Restart=always
+RestartSec=30
+SyslogIdentifier=matrix-bot-text-a-day
+
+[Install]
+WantedBy=multi-user.target

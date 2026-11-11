@@ -528,6 +528,13 @@ devture_systemd_service_manager_services_list_auto: |
     }] if matrix_bot_meowlnir_enabled else [])
     +
     ([{
+      'name': 'matrix-bot-text-a-day.service',
+      'priority': 2200,
+      'restart_necessary': (matrix_bot_text_a_day_restart_necessary | bool),
+      'groups': ['matrix', 'bots', 'text-a-day', 'bot-text-a-day'],
+    }] if matrix_bot_text_a_day_enabled else [])
+    +
+    ([{
       'name': 'matrix-appservice-discord.service',
       'priority': 2000,
       'restart_necessary': (matrix_bridge_appservice_discord_restart_necessary | bool),
@@ -3642,6 +3649,45 @@ matrix_bot_meowlnir_container_labels_policy_server_traefik_tls_certResolver: "{{
 
 ######################################################################
 #
+# matrix-bot-text-a-day
+#
+######################################################################
+
+# We don't enable bots by default.
+matrix_bot_text_a_day_enabled: false
+
+matrix_bot_text_a_day_systemd_required_services_list_auto: |
+  {{
+    matrix_addons_homeserver_systemd_services_list
+  }}
+
+matrix_bot_text_a_day_container_network: "{{ matrix_addons_container_network }}"
+
+matrix_bot_text_a_day_container_additional_networks_auto: |-
+  {{
+    (
+      ([] if matrix_addons_homeserver_container_network == '' else [matrix_addons_homeserver_container_network])
+    ) | unique
+  }}
+
+matrix_bot_text_a_day_config_homeserver_url: "{{ matrix_addons_homeserver_client_api_url }}"
+matrix_bot_text_a_day_config_user_password: "{{ (matrix_homeserver_generic_secret_key + ':text-a-day.bot.password') | hash('sha512') | to_uuid }}"
+matrix_bot_text_a_day_matrix_crypto_pickle_key: "{{ (matrix_homeserver_generic_secret_key + ':text-a-day.crypto.pickle') | hash('sha512') }}"
+
+matrix_bot_text_a_day_container_image_registry_prefix_upstream: "{{ matrix_container_global_registry_prefix_override if matrix_container_global_registry_prefix_override else matrix_bot_text_a_day_container_image_registry_prefix_upstream_default }}"
+
+# We keep the local image self-built from the git checkout.
+matrix_bot_text_a_day_container_image_self_build: true
+
+######################################################################
+#
+# /matrix-bot-text-a-day
+#
+######################################################################
+
+
+######################################################################
+#
 # matrix-appservice-draupnir-for-all
 #
 ######################################################################
@@ -6349,6 +6395,12 @@ matrix_user_creator_users_auto: |
       'initial_password': matrix_bot_draupnir_password,
       'initial_type': ('admin' if matrix_bot_draupnir_admin_api_enabled else 'bot'),
     }] if matrix_bot_draupnir_enabled and matrix_bot_draupnir_password else [])
+    +
+    ([{
+      'username': matrix_bot_text_a_day_config_user_mxid_localpart,
+      'initial_password': matrix_bot_text_a_day_config_user_password,
+      'initial_type': 'bot',
+    }] if matrix_bot_text_a_day_enabled and (matrix_bot_text_a_day_config_user_password | default('', true) | string | length > 0) else [])
   }}
 
 ######################################################################

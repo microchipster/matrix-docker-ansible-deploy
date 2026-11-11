@@ -1,0 +1,138 @@
+{# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later #}
+{
+  "data_dir": {{ matrix_bot_text_a_day_config_data_dir | to_json }},
+  "timezone": {{ matrix_bot_text_a_day_config_timezone | to_json }},
+  "management_room": {{ matrix_bot_text_a_day_config_management_room | to_json }},
+  "shared_space_name": {{ matrix_bot_text_a_day_config_shared_space_name | to_json }},
+  "shared_space_display_name": {{ matrix_bot_text_a_day_config_shared_space_display_name | to_json }},
+  "default_daily_time": {{ matrix_bot_text_a_day_config_default_daily_time | to_json }},
+  "matrix_homeserver": {{ matrix_bot_text_a_day_config_homeserver_url | to_json }},
+  "matrix_access_token": {{ matrix_bot_text_a_day_matrix_access_token | to_json }},
+  "matrix_user_id": {{ matrix_bot_text_a_day_config_user_id | to_json }},
+  "matrix_crypto_pickle_key": {{ matrix_bot_text_a_day_matrix_crypto_pickle_key | to_json }},
+  "matrix_public_admin_user_ids": {{ matrix_bot_text_a_day_public_admin_user_ids | to_json }},
+  "text_a_day_ai_api_key": {{ matrix_bot_text_a_day_ai_api_key | to_json }},
+  "text_a_day_ai_models": {{ matrix_bot_text_a_day_ai_models | to_json }},
+  "text_a_day_ai_urls": {{ matrix_bot_text_a_day_ai_urls | to_json }},
+  "quote_ai_api_key": {{ matrix_bot_text_a_day_quote_ai_api_key | to_json }},
+  "quote_ai_models": {{ matrix_bot_text_a_day_quote_ai_models | to_json }},
+  "quote_ai_urls": {{ matrix_bot_text_a_day_quote_ai_urls | to_json }},
+  "streams": [
+    {
+      "id": "text-a-day",
+      "name": "Text A Day",
+      "kind": "public",
+      "enabled": true,
+      "room": {
+        "room_id": {{ matrix_bot_text_a_day_stream_room_ids.get('text-a-day', '') | to_json }},
+        "space_id": "",
+        "name": "Text A Day",
+        "topic": "Daily literary text and summary",
+        "description": "",
+        "kind": "public"
+      },
+      "schedule": {
+        "daily_at": "09:00",
+        "timezone": {{ matrix_bot_text_a_day_config_timezone | to_json }}
+      },
+      "source": {
+        "kind": "text_a_day",
+        "path": "",
+        "url": "https://www.itssauquet.com/pilot",
+        "format": "text-a-day",
+        "known_words_path": "",
+        "excluded_path": "",
+        "fields": null,
+        "metadata": null,
+        "limit": 0,
+        "repeat_delay_days": 0,
+        "fresh_first": false,
+        "weight_bias": 0
+      },
+      "selection": {
+        "fresh_first": true,
+        "repeat_delay_days": 3650,
+        "max_candidates": 128
+      }
+    },
+    {
+      "id": "quote-of-the-day",
+      "name": "Quote of the Day",
+      "kind": "public",
+      "enabled": true,
+      "room": {
+        "room_id": {{ matrix_bot_text_a_day_stream_room_ids.get('quote-of-the-day', '') | to_json }},
+        "space_id": "",
+        "name": "Quote of the Day",
+        "topic": "Daily quote with quality filtering",
+        "description": "",
+        "kind": "public"
+      },
+      "schedule": {
+        "daily_at": "09:15",
+        "timezone": {{ matrix_bot_text_a_day_config_timezone | to_json }}
+      },
+      "source": {
+        "kind": "quote_text",
+        "path": "{{ matrix_bot_text_a_day_config_data_dir }}/{{ matrix_bot_text_a_day_quote_corpus_server_path | basename }}",
+        "url": "",
+        "format": "",
+        "known_words_path": "",
+        "excluded_path": "",
+        "fields": null,
+        "metadata": null,
+        "limit": 0,
+        "repeat_delay_days": 0,
+        "fresh_first": false,
+        "weight_bias": 0
+      },
+      "selection": {
+        "fresh_first": true,
+        "repeat_delay_days": 3650,
+        "max_candidates": 128
+      }
+    },
+    {
+      "id": "word-of-the-day",
+      "name": "Word of the Day",
+      "kind": "public",
+      "enabled": true,
+      "room": {
+        "room_id": {{ matrix_bot_text_a_day_stream_room_ids.get('word-of-the-day', '') | to_json }},
+        "space_id": "",
+        "name": "Word of the Day",
+        "topic": "Daily vocab word, meaning, and sentence",
+        "description": "",
+        "kind": "public"
+      },
+      "schedule": {
+        "daily_at": "09:30",
+        "timezone": {{ matrix_bot_text_a_day_config_timezone | to_json }}
+      },
+      "source": {
+        "kind": "vocab_csv",
+        "path": {{ matrix_bot_text_a_day_word_source_path | to_json }},
+        "url": "",
+        "format": "",
+        "known_words_path": {{ matrix_bot_text_a_day_word_known_words_path | to_json }},
+        "excluded_path": {{ matrix_bot_text_a_day_word_excluded_path | to_json }},
+         "histogram_path": "{{ matrix_bot_text_a_day_config_data_dir }}/{{ matrix_bot_text_a_day_word_histogram_path | basename }}",
+         "dictionary_path": "{{ matrix_bot_text_a_day_config_data_dir }}/dictionary.db",
+         "rhyme_path": "{{ matrix_bot_text_a_day_config_data_dir }}/dictionary.db",
+        "fields": null,
+        "metadata": null,
+        "limit": 0,
+        "repeat_delay_days": 0,
+        "fresh_first": false,
+        "weight_bias": 1
+      },
+      "selection": {
+        "fresh_first": true,
+        "repeat_delay_days": 3650,
+        "max_candidates": 128
+      }
+    }
+  ]
+}

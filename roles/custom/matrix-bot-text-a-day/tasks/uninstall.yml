@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 MDAD project contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+- name: Check existence of matrix-bot-text-a-day service
+  ansible.builtin.stat:
+    path: "{{ devture_systemd_docker_base_systemd_path }}/matrix-bot-text-a-day.service"
+  register: matrix_bot_text_a_day_service_stat
+
+- when: matrix_bot_text_a_day_service_stat.stat.exists | bool
+  block:
+    - name: Ensure Matrix text-a-day is stopped
+      ansible.builtin.service:
+        name: matrix-bot-text-a-day
+        state: stopped
+        enabled: false
+        daemon_reload: true
+
+    - name: Ensure Matrix rooms and state are cleaned up before removal
+      ansible.builtin.command:
+        argv:
+          - "{{ devture_systemd_docker_base_host_command_docker }}"
+          - run
+          - --rm
+          - --network={{ matrix_bot_text_a_day_matrix_login_network }}
+          - -v
+          - "{{ matrix_bot_text_a_day_config_path }}:/config"
+          - -v
+          - "{{ matrix_bot_text_a_day_data_path }}:/data"
+          - --entrypoint=/usr/bin/textaday
+          - "{{ matrix_bot_text_a_day_container_image }}"
+          - -c
+          - /config/config.yaml
+          - -uninstall
+      register: matrix_bot_text_a_day_uninstall_result
+      changed_when: true
+      failed_when: false
+
+    - name: Ensure matrix-bot-text-a-day.service doesn't exist
+      ansible.builtin.file:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/matrix-bot-text-a-day.service"
+        state: absent
+
+    - name: Ensure systemd reloads after text-a-day service removal
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+
+- name: Ensure Matrix text-a-day container image doesn't exist
+  community.docker.docker_image:
+    name: "{{ matrix_bot_text_a_day_container_image }}"
+    state: absent
+    force_absent: true
+  when: matrix_bot_text_a_day_container_image_self_build | bool
+
+- name: Ensure Matrix text-a-day paths don't exist
+  ansible.builtin.file:
+    path: "{{ matrix_bot_text_a_day_base_path }}"
+    state: absent

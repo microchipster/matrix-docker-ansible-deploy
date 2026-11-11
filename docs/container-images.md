@@ -120,6 +120,7 @@ Bots provide various additional functionality to your installation.
 | Service | Container image | Default? | Description |
 | ------- | --------------- | -------- | ----------- |
 | [baibot](configuring-playbook-bot-baibot.md) | [etke.cc/baibot](https://ghcr.io/etkecc/baibot) | ❌ | Bot that exposes the power of [AI](https://en.wikipedia.org/wiki/Artificial_intelligence) / [Large Language Models](https://en.wikipedia.org/wiki/Large_language_model) to you |
+| [Text A Day](configuring-playbook-bot-text-a-day.md) | Self-building | ❌ | Scheduled literary text, quote, and vocabulary streams |
 | [matrix-reminder-bot](configuring-playbook-bot-matrix-reminder-bot.md) | [anoa/matrix-reminder-bot](https://hub.docker.com/r/anoa/matrix-reminder-bot) | ❌ | Bot for scheduling one-off & recurring reminders and alarms |
 | [maubot](configuring-playbook-bot-maubot.md) | [dock.mau.dev/maubot/maubot](https://mau.dev/maubot/maubot/container_registry) | ❌ | Plugin-based Matrix bot system |
 | [Honoroit](configuring-playbook-bot-honoroit.md) | [etke.cc/honoroit](https://github.com/etkecc/honoroit/container_registry) | ❌ | Helpdesk bot |
