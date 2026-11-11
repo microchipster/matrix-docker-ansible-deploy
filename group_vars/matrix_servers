@@ -392,6 +392,13 @@ devture_systemd_service_manager_conditional_restart_enabled: >-
     (ansible_run_tags | select('match', 'setup-') | list | length == 0)
   }}
 
+# Restarting many services in one `systemctl restart` call can transiently fail
+# (e.g. a container that is still shutting down). The role defaults to a single
+# attempt, so retry a few times before failing the whole play. The retry delay
+# stays at the default 10s, which also gives services that auto-restart after
+# `RestartSec=30` time to settle.
+devture_systemd_service_manager_all_at_once_retries: 3
+
 devture_systemd_service_manager_services_list_auto: |
   {{
     ([{
