@@ -1,0 +1,17 @@
+#jinja2: lstrip_blocks: True
+# Network-specific config options
+
+# Suffix appended to auto-generated contact and group names.
+# Set to an empty string to disable the suffix entirely.
+contact_name_suffix: {{ matrix_bridge_mautrix_jmpchat_network_contact_name_suffix | to_json }}
+
+# CardDAV address book integration (used by `carddav-login`).
+# By default the encryption key is derived from your `carddav-unlock <secret>` and kept
+# in memory only, so it is never written to disk. Set a key_file only for on-disk keys.
+carddav:
+    key_file: {{ matrix_bridge_mautrix_jmpchat_carddav_key_file | to_json }}
+
+{% if matrix_bridge_mautrix_jmpchat_network_configuration_extension_yaml %}
+# Extra network configuration (see matrix_bridge_mautrix_jmpchat_network_configuration_extension_yaml).
+{{ matrix_bridge_mautrix_jmpchat_network_configuration_extension_yaml }}
+{% endif %}
