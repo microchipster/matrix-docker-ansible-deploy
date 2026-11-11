@@ -42,6 +42,7 @@
         - install-all
 
     - custom/matrix-base
+    - custom/matrix_playbook_image_preload
     - galaxy/ddclient
     - galaxy/exim_relay
 

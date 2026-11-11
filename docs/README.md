@@ -80,6 +80,8 @@ If your server and services experience issues, feel free to come to [our support
 
 - [Container images used by the playbook](container-images.md)
 
+- [Local image preloading](local-image-preloading.md)
+
 - [Maintaining the Renovate runner](renovate.md)
 
 - [Obtaining an Access Token](obtaining-access-tokens.md)
