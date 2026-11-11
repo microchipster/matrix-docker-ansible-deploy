@@ -126,6 +126,7 @@ Bridges can be used to connect your Matrix installation with third-party communi
 | [mautrix-googlechat](https://github.com/mautrix/googlechat) | ❌ | Bridge to [Google Chat](https://en.wikipedia.org/wiki/Google_Chat) | [Link](docs/configuring-playbook-bridge-mautrix-googlechat.md) |
 | [mautrix-meta](https://github.com/mautrix/meta) | ❌ | Bridge to [Messenger](https://messenger.com/) and [Instagram](https://instagram.com/) | Link for [Messenger](docs/configuring-playbook-bridge-mautrix-meta-messenger.md) / [Instagram](docs/configuring-playbook-bridge-mautrix-meta-instagram.md) |
 | [mautrix-signal](https://github.com/mautrix/signal) | ❌ | Bridge to [Signal](https://www.signal.org/) | [Link](docs/configuring-playbook-bridge-mautrix-signal.md) |
+| [mautrix-jmpchat](https://github.com/microchipster/mautrix-jmpchat) | ❌ | Bridge to [JMP](https://jmp.chat/)/[Cheogram](https://cheogram.com/) XMPP | [Link](docs/configuring-playbook-bridge-mautrix-jmpchat.md) |
 | [beeper-line](https://github.com/beeper/line) | ❌ | Bridge to [LINE](https://line.me/) | [Link](docs/configuring-playbook-bridge-beeper-line.md) |
 | [matrix-appservice-irc](https://github.com/matrix-org/matrix-appservice-irc) | ❌ | Bridge to [IRC](https://wikipedia.org/wiki/Internet_Relay_Chat) | [Link](docs/configuring-playbook-bridge-appservice-irc.md) |
 | [matrix-appservice-discord](https://github.com/matrix-org/matrix-appservice-discord) | ❌ | Bridge to [Discord](https://discordapp.com/) | [Link](docs/configuring-playbook-bridge-appservice-discord.md) |

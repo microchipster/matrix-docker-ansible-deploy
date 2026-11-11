@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2023 Pierre 'McFly' Marty
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+# jmp.chat daemon service
+- name: Check existence of matrix-mautrix-jmpchat-daemon service
+  ansible.builtin.stat:
+    path: "{{ devture_systemd_docker_base_systemd_path }}/matrix-mautrix-jmpchat-daemon.service"
+  register: matrix_bridge_mautrix_jmpchat_daemon_service_stat
+
+- when: matrix_bridge_mautrix_jmpchat_daemon_service_stat.stat.exists | bool
+  block:
+    - name: Ensure matrix-mautrix-jmpchat-daemon is stopped
+      ansible.builtin.service:
+        name: matrix-mautrix-jmpchat-daemon
+        state: stopped
+        enabled: false
+        daemon_reload: true
+
+    - name: Ensure matrix-mautrix-jmpchat-daemon.service doesn't exist
+      ansible.builtin.file:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/matrix-mautrix-jmpchat-daemon.service"
+        state: absent
