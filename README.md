@@ -127,6 +127,7 @@ Bridges can be used to connect your Matrix installation with third-party communi
 | [mautrix-meta](https://github.com/mautrix/meta) | ❌ | Bridge to [Messenger](https://messenger.com/) and [Instagram](https://instagram.com/) | Link for [Messenger](docs/configuring-playbook-bridge-mautrix-meta-messenger.md) / [Instagram](docs/configuring-playbook-bridge-mautrix-meta-instagram.md) |
 | [mautrix-signal](https://github.com/mautrix/signal) | ❌ | Bridge to [Signal](https://www.signal.org/) | [Link](docs/configuring-playbook-bridge-mautrix-signal.md) |
 | [mautrix-jmpchat](https://github.com/microchipster/mautrix-jmpchat) | ❌ | Bridge to [JMP](https://jmp.chat/)/[Cheogram](https://cheogram.com/) XMPP | [Link](docs/configuring-playbook-bridge-mautrix-jmpchat.md) |
+| [mautrix-android-sms-mms](https://github.com/microchipster/mautrix-android-sms-mms) | ❌ | Bridge to Android [SMS](https://en.wikipedia.org/wiki/SMS)/[MMS](https://en.wikipedia.org/wiki/MMS) | [Link](docs/configuring-playbook-bridge-mautrix-android-sms-mms.md) |
 | [beeper-line](https://github.com/beeper/line) | ❌ | Bridge to [LINE](https://line.me/) | [Link](docs/configuring-playbook-bridge-beeper-line.md) |
 | [matrix-appservice-irc](https://github.com/matrix-org/matrix-appservice-irc) | ❌ | Bridge to [IRC](https://wikipedia.org/wiki/Internet_Relay_Chat) | [Link](docs/configuring-playbook-bridge-appservice-irc.md) |
 | [matrix-appservice-discord](https://github.com/matrix-org/matrix-appservice-discord) | ❌ | Bridge to [Discord](https://discordapp.com/) | [Link](docs/configuring-playbook-bridge-appservice-discord.md) |
@@ -182,6 +183,7 @@ Various services that don't fit any other categories.
 | [Matrix.to](https://github.com/matrix-org/matrix.to) | ❌ | Simple URL redirection service for the Matrix ecosystem | [Link](docs/configuring-playbook-matrixto.md) |
 | [Etherpad](https://etherpad.org) | ❌ | Open source collaborative text editor | [Link](docs/configuring-playbook-etherpad.md) |
 | [Matrix Invite Portal](https://github.com/microchipster/matrix-invite-portal) | ❌ | Closed-registration invite portal for non-technical users | [Link](docs/configuring-playbook-invite-portal.md) |
+| [Android SMS/MMS agent](https://github.com/microchipster/mautrix-android-sms-mms) | ❌ | Phone host side of the [Mautrix Android SMS/MMS bridge](docs/configuring-playbook-bridge-mautrix-android-sms-mms.md) (adb agent) | [Link](docs/configuring-playbook-android-sms-mms-agent.md) |
 | [Jitsi](https://jitsi.org/) | ❌ | Open source video-conferencing platform | [Link](docs/configuring-playbook-jitsi.md) |
 | [Cactus Comments](https://cactus.chat) | ❌ | Federated comment system built on Matrix | [Link](docs/configuring-playbook-cactus-comments.md) |
 | [Pantalaimon](https://github.com/matrix-org/pantalaimon) | ❌ | E2EE aware proxy daemon | [Link](docs/configuring-playbook-pantalaimon.md) |

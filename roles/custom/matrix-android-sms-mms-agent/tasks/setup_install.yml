@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+
+- name: Ensure Android SMS/MMS agent paths exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  with_items:
+    - {path: "{{ matrix_android_sms_mms_agent_base_path }}", mode: '0755', owner: root, group: root}
+    - {path: "{{ matrix_android_sms_mms_agent_config_path }}", mode: '0750', owner: "{{ matrix_android_sms_mms_agent_user_name }}", group: "{{ matrix_android_sms_mms_agent_group_name }}"}
+    - {path: "{{ matrix_android_sms_mms_agent_data_path }}", mode: '0750', owner: "{{ matrix_android_sms_mms_agent_user_name }}", group: "{{ matrix_android_sms_mms_agent_group_name }}"}
+    - {path: "{{ matrix_android_sms_mms_agent_src_files_path }}", mode: '0755', owner: root, group: root}
+    - {path: "{{ matrix_android_sms_mms_agent_go_cache_path }}", mode: '0755', owner: root, group: root}
+    - {path: "{{ matrix_android_sms_mms_agent_binary_path }}", mode: '0755', owner: root, group: root}
+
+- name: Ensure Android SMS/MMS agent repository is present
+  ansible.builtin.git:
+    repo: "{{ matrix_android_sms_mms_agent_repo_url }}"
+    dest: "{{ matrix_android_sms_mms_agent_src_files_path }}"
+    version: "{{ matrix_android_sms_mms_agent_repo_version }}"
+    force: "yes"
+  register: matrix_android_sms_mms_agent_git_pull_results
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: matrix_android_sms_mms_agent_git_pull_results is not failed
+
+- name: Check if the Android SMS/MMS agent binary exists
+  ansible.builtin.stat:
+    path: "{{ matrix_android_sms_mms_agent_binary_path }}/{{ matrix_android_sms_mms_agent_binary_filename }}"
+  register: matrix_android_sms_mms_agent_binary_stat
+
+- name: Ensure Android SMS/MMS agent binary is built
+  community.docker.docker_container:
+    name: matrix-android-sms-mms-agent-build
+    image: "{{ matrix_android_sms_mms_agent_build_container_image }}"
+    state: started
+    detach: false
+    cleanup: true
+    pull: missing
+    network_mode: host
+    working_dir: /src
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /src/dist
+        && CGO_ENABLED=0 go build -trimpath -ldflags='-s -w'
+        -o /src/dist/{{ matrix_android_sms_mms_agent_binary_filename }} ./cmd/{{ matrix_android_sms_mms_agent_binary_filename }}
+    env:
+      GOCACHE: /go-cache/build
+      GOMODCACHE: /go-cache/mod
+    volumes:
+      - "{{ matrix_android_sms_mms_agent_src_files_path }}:/src"
+      - "{{ matrix_android_sms_mms_agent_go_cache_path }}:/go-cache"
+  register: matrix_android_sms_mms_agent_build_result
+  when: >-
+    matrix_android_sms_mms_agent_git_pull_results.changed | bool
+    or not matrix_android_sms_mms_agent_binary_stat.stat.exists | bool
+
+- name: Ensure Android SMS/MMS agent binary is installed
+  ansible.builtin.copy:
+    src: "{{ matrix_android_sms_mms_agent_src_files_path }}/dist/{{ matrix_android_sms_mms_agent_binary_filename }}"
+    dest: "{{ matrix_android_sms_mms_agent_binary_path }}/{{ matrix_android_sms_mms_agent_binary_filename }}"
+    remote_src: true
+    mode: '0755'
+    owner: root
+    group: root
+  register: matrix_android_sms_mms_agent_binary_result
+
+- name: Ensure Android SMS/MMS agent config installed
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/agent.yaml.j2"
+    dest: "{{ matrix_android_sms_mms_agent_config_path }}/agent.yaml"
+    mode: '0600'
+    owner: "{{ matrix_android_sms_mms_agent_user_name }}"
+    group: "{{ matrix_android_sms_mms_agent_group_name }}"
+  register: matrix_android_sms_mms_agent_config_result
+
+- name: Ensure matrix-android-sms-mms-agent.service installed
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/systemd/matrix-android-sms-mms-agent.service.j2"
+    dest: "{{ devture_systemd_docker_base_systemd_path }}/matrix-android-sms-mms-agent.service"
+    mode: '0644'
+  register: matrix_android_sms_mms_agent_systemd_service_result
+
+- name: Determine whether matrix-android-sms-mms-agent needs a restart
+  ansible.builtin.set_fact:
+    matrix_android_sms_mms_agent_restart_necessary: >-
+      {{
+        matrix_android_sms_mms_agent_config_result.changed | default(false)
+        or matrix_android_sms_mms_agent_binary_result.changed | default(false)
+        or matrix_android_sms_mms_agent_systemd_service_result.changed | default(false)
+      }}

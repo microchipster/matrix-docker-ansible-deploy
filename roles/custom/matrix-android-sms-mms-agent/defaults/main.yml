@@ -1,0 +1,113 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+# android-sms-mms-adb-agent is the phone host side of the mautrix-android-sms-mms bridge.
+# It reads SMS/MMS from a USB-connected Android device over adb and exposes them as a
+# local HTTP API to the bridge (see `docs/AGENT_API.md` in the project's repository).
+# Project source code URL: https://github.com/microchipster/mautrix-android-sms-mms
+#
+# The agent runs as a systemd service (not as a container), because it needs adb (and
+# therefore USB) access to the device. Its service unit is named
+# `matrix-android-sms-mms-agent.service`.
+
+matrix_android_sms_mms_agent_enabled: false
+
+# The agent is built from the same repository that provides the bridge.
+matrix_android_sms_mms_agent_repo_url: "https://github.com/microchipster/mautrix-android-sms-mms.git"
+matrix_android_sms_mms_agent_repo_version: main
+
+# The Go toolchain used to build the agent binary, running as a one-shot container.
+matrix_android_sms_mms_agent_build_container_image: "{{ matrix_android_sms_mms_agent_build_container_image_registry_prefix }}golang:1.27-alpine"
+matrix_android_sms_mms_agent_build_container_image_registry_prefix: "{{ matrix_android_sms_mms_agent_build_container_image_registry_prefix_upstream }}"
+matrix_android_sms_mms_agent_build_container_image_registry_prefix_upstream: "{{ matrix_container_global_registry_prefix_override if matrix_container_global_registry_prefix_override else matrix_android_sms_mms_agent_build_container_image_registry_prefix_upstream_default }}"
+matrix_android_sms_mms_agent_build_container_image_registry_prefix_upstream_default: ""
+
+matrix_android_sms_mms_agent_base_path: "{{ matrix_base_data_path }}/android-sms-mms-agent"
+matrix_android_sms_mms_agent_config_path: "{{ matrix_android_sms_mms_agent_base_path }}/config"
+matrix_android_sms_mms_agent_data_path: "{{ matrix_android_sms_mms_agent_base_path }}/data"
+matrix_android_sms_mms_agent_src_files_path: "{{ matrix_android_sms_mms_agent_base_path }}/src"
+matrix_android_sms_mms_agent_go_cache_path: "{{ matrix_android_sms_mms_agent_base_path }}/go-cache"
+matrix_android_sms_mms_agent_binary_path: "{{ matrix_android_sms_mms_agent_base_path }}/bin"
+matrix_android_sms_mms_agent_binary_filename: android-sms-mms-adb-agent
+
+# The user and group that run the agent service.
+#
+# The default of `root` is the easiest way to give the agent (and the adb server it
+# starts) access to the phone. If you prefer running it as an unprivileged user,
+# configure appropriate udev rules for the device and adjust these variables.
+matrix_android_sms_mms_agent_user_name: root
+matrix_android_sms_mms_agent_group_name: root
+
+# Agent configuration (rendered to `agent.yaml`).
+# See the project's `internal/agent/config.go` for the meaning of each option.
+
+# The `adb` binary to use.
+matrix_android_sms_mms_agent_adb_path: adb
+
+# Selects the device (adb's `-s` argument). Leave empty to use the only attached device.
+matrix_android_sms_mms_agent_serial: ''
+
+# The HTTP bind address. The bridge must be able to reach it.
+# Keep it bound to localhost when the bridge runs on the same machine (see the documentation
+# for how to reach the agent from the bridge's container).
+matrix_android_sms_mms_agent_listen: 127.0.0.1:8093
+
+# The bearer token required by all agent routes except `/v1/health`.
+# There is no default secret — you must define one.
+matrix_android_sms_mms_agent_token: ''
+
+# The sweep interval in milliseconds.
+matrix_android_sms_mms_agent_poll_interval_ms: 3000
+
+# How far back each sweep re-reads, in milliseconds (default: 10 minutes).
+matrix_android_sms_mms_agent_sweep_overlap_ms: 600000
+
+# Numbers to exclude from thread recipients (usually the phone's own number).
+matrix_android_sms_mms_agent_own_numbers: []
+
+# Limits which SIM subscriptions are bridged. An empty list means all of them.
+matrix_android_sms_mms_agent_sub_ids: []
+
+# Stores watermarks and dedupe state.
+matrix_android_sms_mms_agent_data_dir: "{{ matrix_android_sms_mms_agent_data_path }}"
+
+# Caps history pages returned per request.
+matrix_android_sms_mms_agent_history_limit: 200
+
+# Outgoing message configuration.
+matrix_android_sms_mms_agent_send_enabled: true
+
+# Overrides the `service call isms` transaction code (0 = auto-detect from the SDK).
+matrix_android_sms_mms_agent_send_isms_tx_code: 0
+
+# Permits splitting messages over 160 UTF-16 code units into multiple SMS.
+# The shell backend cannot do real multipart, so this is off by default:
+# long messages fail loudly instead of silently fracturing.
+matrix_android_sms_mms_agent_send_allow_sms_split: false
+
+# Passed to the telephony service as the calling package.
+matrix_android_sms_mms_agent_send_caller_package: com.android.shell
+
+# How long a send waits for the provider row to appear, in milliseconds.
+matrix_android_sms_mms_agent_send_resolve_timeout_ms: 30000
+
+# List of systemd services that matrix-android-sms-mms-agent.service depends on.
+matrix_android_sms_mms_agent_systemd_required_services_list: "{{ matrix_android_sms_mms_agent_systemd_required_services_list_default + matrix_android_sms_mms_agent_systemd_required_services_list_auto + matrix_android_sms_mms_agent_systemd_required_services_list_custom }}"
+matrix_android_sms_mms_agent_systemd_required_services_list_default: []
+matrix_android_sms_mms_agent_systemd_required_services_list_auto: []
+matrix_android_sms_mms_agent_systemd_required_services_list_custom: []
+
+# List of systemd services that matrix-android-sms-mms-agent.service wants
+matrix_android_sms_mms_agent_systemd_wanted_services_list: []
+
+# matrix_android_sms_mms_agent_restart_necessary controls whether the service
+# will be restarted (when true) or merely started (when false) by the
+# systemd service manager role (when conditional restart is enabled).
+#
+# This value is automatically computed during installation based on whether
+# the configuration file, the systemd service file, or the binary changed.
+# The default of `false` means "no restart needed" — appropriate when the role's
+# installation tasks haven't run (e.g., due to --tags skipping them).
+matrix_android_sms_mms_agent_restart_necessary: false

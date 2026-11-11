@@ -67,6 +67,9 @@
     - custom/matrix-bridge-mautrix-telegram
     - custom/matrix-bridge-mautrix-signal
     - custom/matrix-bridge-mautrix-jmpchat
+    - custom/matrix-bridge-mautrix-android-sms-mms
+    # The Android SMS/MMS agent runs on the host the phone is plugged into, which may be a different machine.
+    - custom/matrix-android-sms-mms-agent
     - custom/matrix-bridge-mautrix-gmessages
     - custom/matrix-bridge-mautrix-gvoice
     - custom/matrix-bridge-mautrix-linkedin

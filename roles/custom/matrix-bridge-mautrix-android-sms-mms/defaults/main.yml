@@ -1,0 +1,340 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+# mautrix-android-sms-mms is a Matrix <-> Android SMS/MMS bridge.
+# Project source code URL: https://github.com/microchipster/mautrix-android-sms-mms
+
+matrix_bridge_mautrix_android_sms_mms_enabled: false
+
+matrix_bridge_mautrix_android_sms_mms_container_image_self_build: true
+matrix_bridge_mautrix_android_sms_mms_container_image_self_build_repo: "https://github.com/microchipster/mautrix-android-sms-mms.git"
+matrix_bridge_mautrix_android_sms_mms_container_image_self_build_branch: "{{ 'main' if matrix_bridge_mautrix_android_sms_mms_version == 'latest' else matrix_bridge_mautrix_android_sms_mms_version }}"
+
+# Controls whether the container image is built on the machine running Ansible
+# and copied to the server instead of being built on the server (see docs/local-image-preloading.md).
+matrix_bridge_mautrix_android_sms_mms_container_image_preload: false
+
+# The bridge does not publish container images yet, so self-building from the git repository is the only supported path.
+# The version is the git ref (branch, tag or commit) that the image is built from.
+matrix_bridge_mautrix_android_sms_mms_version: latest
+
+matrix_bridge_mautrix_android_sms_mms_container_image: "{{ matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix }}mautrix/android-sms-mms:{{ matrix_bridge_mautrix_android_sms_mms_container_image_tag }}"
+matrix_bridge_mautrix_android_sms_mms_container_image_tag: "{{ matrix_bridge_mautrix_android_sms_mms_version }}"
+matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix: "{{ 'localhost/' if matrix_bridge_mautrix_android_sms_mms_container_image_self_build else matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream }}"
+matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream: "{{ matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream_default }}"
+matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream_default: "dock.mau.dev/"
+matrix_bridge_mautrix_android_sms_mms_container_image_force_pull: "{{ matrix_bridge_mautrix_android_sms_mms_container_image.endswith(':latest') }}"
+
+matrix_bridge_mautrix_android_sms_mms_base_path: "{{ matrix_base_data_path }}/mautrix-android-sms-mms"
+matrix_bridge_mautrix_android_sms_mms_config_path: "{{ matrix_bridge_mautrix_android_sms_mms_base_path }}/config"
+matrix_bridge_mautrix_android_sms_mms_data_path: "{{ matrix_bridge_mautrix_android_sms_mms_base_path }}/data"
+matrix_bridge_mautrix_android_sms_mms_container_src_files_path: "{{ matrix_bridge_mautrix_android_sms_mms_base_path }}/docker-src"
+
+matrix_bridge_mautrix_android_sms_mms_homeserver_address: ""
+matrix_bridge_mautrix_android_sms_mms_homeserver_domain: "{{ matrix_domain }}"
+# Whether asynchronous uploads via MSC2246 should be enabled for media.
+# Requires a homeserver that supports MSC2246 (https://github.com/matrix-org/matrix-spec-proposals/pull/2246).
+matrix_bridge_mautrix_android_sms_mms_homeserver_async_media: false
+matrix_bridge_mautrix_android_sms_mms_appservice_address: "http://matrix-mautrix-android-sms-mms:29321"
+
+matrix_bridge_mautrix_android_sms_mms_msc4190_enabled: "{{ matrix_bridges_msc4190_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_self_sign_enabled: "{{ matrix_bridges_self_sign_enabled }}"
+
+matrix_bridge_mautrix_android_sms_mms_command_prefix: "!sms"
+
+# Connector-level network config (rendered to `simple-config.yaml` and the `network` section of `config.yaml`).
+#
+# Per-login settings (the agent URL and its bearer token) live in the login itself, because one bridge
+# instance can manage several phones. These values only pre-fill the login flow.
+matrix_bridge_mautrix_android_sms_mms_default_agent_url: "http://127.0.0.1:8093"
+matrix_bridge_mautrix_android_sms_mms_default_agent_token: ''
+matrix_bridge_mautrix_android_sms_mms_send_reactions_as_text: false
+matrix_bridge_mautrix_android_sms_mms_history_default_days: 30
+matrix_bridge_mautrix_android_sms_mms_max_attachment_size_mb: 50
+matrix_bridge_mautrix_android_sms_mms_device_name: ''
+
+# Public app pairing API (see the project's `docs/PAIRING_PROTOCOL.md`).
+#
+# When enabled, the bridge serves its pairing/queue API under `/_smsmms/v1/` and the playbook
+# exposes that path through the reverse proxy, so the phone app can pair and poll over HTTPS.
+matrix_bridge_mautrix_android_sms_mms_pairing_enabled: true
+
+# The container port the pairing API listens on and that the reverse proxy forwards to.
+matrix_bridge_mautrix_android_sms_mms_pairing_port: 29322
+
+# The address inside the container the pairing API listens on.
+# The reverse proxy reaches the container over the container network.
+matrix_bridge_mautrix_android_sms_mms_pairing_listen: ":{{ matrix_bridge_mautrix_android_sms_mms_pairing_port }}"
+
+# The path prefix the pairing API is served under.
+# The bridge serves all pairing endpoints below it (e.g. `/_smsmms/v1/queue`).
+matrix_bridge_mautrix_android_sms_mms_pairing_path_prefix: /_smsmms
+
+# Externally reachable base URL of the bridge, embedded into the pairing payload (QR code /
+# manual code), so the app knows where to poll. It must match the URL under which the reverse
+# proxy exposes the pairing API.
+matrix_bridge_mautrix_android_sms_mms_pairing_public_url: "{{ matrix_bridge_mautrix_android_sms_mms_pairing_scheme }}://{{ matrix_bridge_mautrix_android_sms_mms_pairing_hostname }}"
+matrix_bridge_mautrix_android_sms_mms_pairing_scheme: https
+matrix_bridge_mautrix_android_sms_mms_pairing_hostname: "{{ matrix_server_fqn_matrix }}"
+
+# Bridge-hosted encrypted file service ("CDN", see the project's `docs/cdn-file-service.md`).
+#
+# The app encrypts files and uploads ciphertext; the bridge stores and serves the ciphertext and
+# never sees the key (it stays in the link's URL fragment).
+#
+# The feature follows the playbook's "provisioned => enabled" model: it is enabled automatically
+# as long as a non-empty `cdn_domain` is configured (the default points at `cdn.<matrix domain>`)
+# and the reverse proxy exposes it. Blank the domain to disable it.
+# Setting `cdn_enabled` explicitly overrides the automatic behavior (your value wins), which keeps
+# configurations that toggle it directly working.
+# Make sure DNS and a certificate exist for `cdn_domain` before clients use the service.
+matrix_bridge_mautrix_android_sms_mms_cdn_domain: "cdn.{{ matrix_domain }}"
+matrix_bridge_mautrix_android_sms_mms_cdn_enabled: "{{ matrix_bridge_mautrix_android_sms_mms_cdn_domain | length > 0 }}"
+matrix_bridge_mautrix_android_sms_mms_cdn_data_dir: "/data/cdn"
+matrix_bridge_mautrix_android_sms_mms_cdn_max_file_bytes: 536870912
+matrix_bridge_mautrix_android_sms_mms_cdn_per_user_cap_bytes: 10737418240
+matrix_bridge_mautrix_android_sms_mms_cdn_default_expiry: "30d"
+matrix_bridge_mautrix_android_sms_mms_cdn_max_expiry: "365d"
+matrix_bridge_mautrix_android_sms_mms_cdn_gc_interval: "1h"
+# Optional static upload token for trusted clients that cannot hold a paired-device token
+# (for example the jmpchat bridge sending its outbound attachments through this service).
+# Set together with `cdn_upload_token_owner` (a Matrix user id); leave both empty to disable.
+matrix_bridge_mautrix_android_sms_mms_cdn_upload_token: ""
+matrix_bridge_mautrix_android_sms_mms_cdn_upload_token_owner: ""
+
+# CardDAV address book integration (used by `carddav-login`).
+# Stored CardDAV credentials and contact names are encrypted (AES-256-GCM) with a key
+# derived from the secret given to `carddav-unlock` in the management room, kept in memory only.
+# Leave empty to keep the key off the disk entirely; a legacy key file at /data/carddav.key is
+# still read while it exists so it can be migrated to the in-memory key.
+# Set this to a path only to keep using an on-disk key file explicitly.
+matrix_bridge_mautrix_android_sms_mms_carddav_key_file: ""
+
+# Extra raw YAML appended to the bridge's `simple-config.yaml` (the network configuration).
+# Use it for `anti_spam` or any other network-level option. Example (observe first, act later):
+#
+# matrix_bridge_mautrix_android_sms_mms_network_configuration_extension_yaml: |
+#   anti_spam:
+#     enabled: true
+#     dry_run: true
+#     unknown_sender_policy: bridge
+matrix_bridge_mautrix_android_sms_mms_network_configuration_extension_yaml: ''
+
+matrix_bridge_mautrix_android_sms_mms_bridge_permissions: |
+  {{
+    {'*': 'relay', matrix_bridge_mautrix_android_sms_mms_homeserver_domain: 'user'}
+    | combine({matrix_admin: 'admin'} if matrix_admin else {})
+  }}
+
+# Enable bridge relay functionality
+matrix_bridge_mautrix_android_sms_mms_bridge_relay_enabled: "{{ matrix_bridges_relay_enabled }}"
+
+# Only allow admins on this home server to set themselves as a relay user
+matrix_bridge_mautrix_android_sms_mms_bridge_relay_admin_only: true
+
+matrix_bridge_mautrix_android_sms_mms_container_network: ""
+
+matrix_bridge_mautrix_android_sms_mms_container_additional_networks: "{{ matrix_bridge_mautrix_android_sms_mms_container_additional_networks_auto + matrix_bridge_mautrix_android_sms_mms_container_additional_networks_custom }}"
+matrix_bridge_mautrix_android_sms_mms_container_additional_networks_auto: []
+matrix_bridge_mautrix_android_sms_mms_container_additional_networks_custom: []
+
+# matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
+# See `../templates/labels.j2` for details.
+#
+# To inject your own other container labels, see `matrix_bridge_mautrix_android_sms_mms_container_labels_additional_labels`.
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_enabled: true
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_docker_network: "{{ matrix_bridge_mautrix_android_sms_mms_container_network }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints: web-secure
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+
+# Controls whether labels will be added that expose the bridge's public app pairing API (under `/_smsmms/`).
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_enabled: "{{ matrix_bridge_mautrix_android_sms_mms_pairing_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_rule: "Host(`{{ matrix_bridge_mautrix_android_sms_mms_pairing_hostname }}`) && PathPrefix(`{{ matrix_bridge_mautrix_android_sms_mms_pairing_path_prefix }}/`)"
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_priority: 0
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_entrypoints: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_tls: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_entrypoints != 'web' }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_pairing_traefik_tls_certResolver: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_tls_certResolver }}"  # noqa var-naming
+
+# Controls whether labels will be added that expose the bridge's encrypted file service on `cdn_domain`.
+# The route is only useful when the service is enabled and a non-empty domain has been provisioned.
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_enabled: "{{ matrix_bridge_mautrix_android_sms_mms_cdn_enabled | bool and matrix_bridge_mautrix_android_sms_mms_cdn_domain | length > 0 }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_traefik_rule: "Host(`{{ matrix_bridge_mautrix_android_sms_mms_cdn_domain }}`)"
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_traefik_priority: 0
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_traefik_entrypoints: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_traefik_tls: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints != 'web' }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_cdn_traefik_tls_certResolver: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_tls_certResolver }}"  # noqa var-naming
+
+# Controls whether labels will be added that expose the bridge's metrics
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_enabled: "{{ matrix_bridge_mautrix_android_sms_mms_metrics_enabled and matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_rule: "Host(`{{ matrix_bridge_mautrix_android_sms_mms_metrics_proxying_hostname }}`) && PathPrefix(`{{ matrix_bridge_mautrix_android_sms_mms_metrics_proxying_path_prefix }}`)"
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_priority: 0
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_entrypoints: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_tls: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_entrypoints != 'web' }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_traefik_tls_certResolver: "{{ matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_tls_certResolver }}"  # noqa var-naming
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_middleware_basic_auth_enabled: false
+# See: https://doc.traefik.io/traefik/middlewares/http/basicauth/#users
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_middleware_basic_auth_users: ''
+
+# matrix_bridge_mautrix_android_sms_mms_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
+# See `../templates/labels.j2` for details.
+#
+# Example:
+# matrix_bridge_mautrix_android_sms_mms_container_labels_additional_labels: |
+#   my.label=1
+#   another.label="here"
+matrix_bridge_mautrix_android_sms_mms_container_labels_additional_labels: ''
+
+# A list of extra arguments to pass to the container
+matrix_bridge_mautrix_android_sms_mms_container_extra_arguments: []
+
+# List of ports to bind to the host to expose them directly.
+# Supply docker port bind arguments in a list like this:
+#
+# matrix_bridge_mautrix_android_sms_mms_container_http_host_bind_ports:
+#   - "127.0.0.1:29322:29322"
+#
+# Above example will bind the pairing API port in the container to port 29322 on localhost.
+matrix_bridge_mautrix_android_sms_mms_container_http_host_bind_ports: []
+
+# List of systemd services that matrix-mautrix-android-sms-mms.service depends on.
+matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list: "{{ matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_default + matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_auto + matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_custom }}"
+matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_auto: []
+matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_custom: []
+
+# List of systemd services that matrix-mautrix-android-sms-mms.service wants
+matrix_bridge_mautrix_android_sms_mms_systemd_wanted_services_list: []
+
+matrix_bridge_mautrix_android_sms_mms_appservice_token: ''
+matrix_bridge_mautrix_android_sms_mms_homeserver_token: ''
+
+matrix_bridge_mautrix_android_sms_mms_appservice_bot_username: android-sms-mmsbot
+
+# Minimum severity of journal log messages.
+# Valid values: fatal, error, warn, info, debug, trace
+matrix_bridge_mautrix_android_sms_mms_logging_level: 'warn'
+
+# Whether or not created rooms should have federation enabled.
+# If false, created portal rooms will never be federated.
+matrix_bridge_mautrix_android_sms_mms_federate_rooms: true
+
+matrix_bridge_mautrix_android_sms_mms_backfill_enabled: true
+matrix_bridge_mautrix_android_sms_mms_backfill_max_initial_messages: 50
+matrix_bridge_mautrix_android_sms_mms_backfill_max_catchup_messages: 500
+matrix_bridge_mautrix_android_sms_mms_backfill_unread_hours_threshold: 720
+matrix_bridge_mautrix_android_sms_mms_backfill_threads_max_initial_messages: 50
+
+# Whether or not metrics endpoint should be enabled.
+# Enabling them is usually enough for a local (in-container) Prometheus to consume them.
+# If metrics need to be consumed by another (external) Prometheus server, consider exposing them via `matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled`.
+matrix_bridge_mautrix_android_sms_mms_metrics_enabled: false
+
+# Controls whether metrics should be exposed on a public URL.
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled: false
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_hostname: ''
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_path_prefix: ''
+
+# Database-related configuration fields.
+#
+# To use SQLite, stick to these defaults.
+#
+# To use Postgres:
+# - change the engine (`matrix_bridge_mautrix_android_sms_mms_database_engine: 'postgres'`)
+# - adjust your database credentials via the `matrix_bridge_mautrix_android_sms_mms_database_*` variables
+matrix_bridge_mautrix_android_sms_mms_database_engine: 'sqlite'
+
+matrix_bridge_mautrix_android_sms_mms_sqlite_database_path_local: "{{ matrix_bridge_mautrix_android_sms_mms_data_path }}/mautrix-android-sms-mms.db"
+matrix_bridge_mautrix_android_sms_mms_sqlite_database_path_in_container: "/data/mautrix-android-sms-mms.db?_txlock=immediate"
+
+matrix_bridge_mautrix_android_sms_mms_database_username: 'matrix_bridge_mautrix_android_sms_mms'
+matrix_bridge_mautrix_android_sms_mms_database_password: 'some-password'
+matrix_bridge_mautrix_android_sms_mms_database_hostname: ''
+matrix_bridge_mautrix_android_sms_mms_database_port: 5432
+matrix_bridge_mautrix_android_sms_mms_database_name: 'matrix_bridge_mautrix_android_sms_mms'
+matrix_bridge_mautrix_android_sms_mms_database_sslmode: disable
+
+matrix_bridge_mautrix_android_sms_mms_database_connection_string: 'postgresql://{{ matrix_bridge_mautrix_android_sms_mms_database_username }}:{{ matrix_bridge_mautrix_android_sms_mms_database_password }}@{{ matrix_bridge_mautrix_android_sms_mms_database_hostname }}:{{ matrix_bridge_mautrix_android_sms_mms_database_port }}/{{ matrix_bridge_mautrix_android_sms_mms_database_name }}?sslmode={{ matrix_bridge_mautrix_android_sms_mms_database_sslmode }}'
+
+matrix_bridge_mautrix_android_sms_mms_appservice_database_type: "{{
+	{
+		'sqlite': 'sqlite3-fk-wal',
+		'postgres':'postgres',
+	}[matrix_bridge_mautrix_android_sms_mms_database_engine]
+}}"
+
+matrix_bridge_mautrix_android_sms_mms_appservice_database_uri: "{{
+	{
+		'sqlite': matrix_bridge_mautrix_android_sms_mms_sqlite_database_path_in_container,
+		'postgres': matrix_bridge_mautrix_android_sms_mms_database_connection_string,
+	}[matrix_bridge_mautrix_android_sms_mms_database_engine]
+}}"
+
+matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets: "{{ matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets_auto | combine(matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets_custom) }}"
+matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets_auto: {}
+matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets_custom: {}
+
+# Default mautrix-android-sms-mms configuration template which covers the generic use case.
+# You can customize it by controlling the various variables inside it.
+#
+# For a more advanced customization, you can extend the default (see `matrix_bridge_mautrix_android_sms_mms_configuration_extension_yaml`)
+# or completely replace this variable with your own template.
+matrix_bridge_mautrix_android_sms_mms_configuration_yaml: "{{ lookup('template', 'templates/config.yaml.j2') }}"
+
+matrix_bridge_mautrix_android_sms_mms_configuration_extension_yaml: |
+  # Your custom YAML configuration goes here.
+  # This configuration extends the default starting configuration (`matrix_bridge_mautrix_android_sms_mms_configuration_yaml`).
+  #
+  # You can override individual variables from the default configuration, or introduce new ones.
+  #
+  # If you need something more special, you can take full control by
+  # completely redefining `matrix_bridge_mautrix_android_sms_mms_configuration_yaml`.
+
+matrix_bridge_mautrix_android_sms_mms_configuration_extension: "{{ matrix_bridge_mautrix_android_sms_mms_configuration_extension_yaml | from_yaml if matrix_bridge_mautrix_android_sms_mms_configuration_extension_yaml | from_yaml is mapping else {} }}"
+
+# Holds the final configuration (a combination of the default and its extension).
+# You most likely don't need to touch this variable. Instead, see `matrix_bridge_mautrix_android_sms_mms_configuration_yaml`.
+matrix_bridge_mautrix_android_sms_mms_configuration: "{{ matrix_bridge_mautrix_android_sms_mms_configuration_yaml | from_yaml | combine(matrix_bridge_mautrix_android_sms_mms_configuration_extension, recursive=True) }}"
+
+matrix_bridge_mautrix_android_sms_mms_registration_yaml: |
+  id: android-sms-mms
+  url: {{ matrix_bridge_mautrix_android_sms_mms_appservice_address }}
+  as_token: "{{ matrix_bridge_mautrix_android_sms_mms_appservice_token }}"
+  hs_token: "{{ matrix_bridge_mautrix_android_sms_mms_homeserver_token }}"
+  sender_localpart: _bot_android-sms-mmsbot
+  rate_limited: false
+  namespaces:
+      users:
+      - regex: '^@android-sms-mms_.*:{{ matrix_bridge_mautrix_android_sms_mms_homeserver_domain | regex_escape }}$'
+        exclusive: true
+      - exclusive: true
+        regex: '^@{{ matrix_bridge_mautrix_android_sms_mms_appservice_bot_username | regex_escape }}:{{ matrix_bridge_mautrix_android_sms_mms_homeserver_domain | regex_escape }}$'
+  de.sorunome.msc2409.push_ephemeral: true
+  receive_ephemeral: true
+  io.element.msc4190: {{ matrix_bridge_mautrix_android_sms_mms_msc4190_enabled | to_json }}
+
+matrix_bridge_mautrix_android_sms_mms_registration: "{{ matrix_bridge_mautrix_android_sms_mms_registration_yaml | from_yaml }}"
+
+# Enable End-to-bridge encryption
+matrix_bridge_mautrix_android_sms_mms_bridge_encryption_allow: "{{ matrix_bridges_encryption_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_bridge_encryption_default: "{{ matrix_bridges_encryption_default }}"
+# Whether the matrix-leg of all bridge chats must be encrypted to the bot.
+# Defaults to requiring encryption so plaintext bot conversations cannot occur.
+matrix_bridge_mautrix_android_sms_mms_bridge_encryption_require: "{{ matrix_bridges_encryption_require | default(true) }}"
+matrix_bridge_mautrix_android_sms_mms_bridge_encryption_key_sharing_allow: "{{ matrix_bridge_mautrix_android_sms_mms_bridge_encryption_allow }}"
+
+matrix_bridge_mautrix_android_sms_mms_bridge_personal_filtering_spaces: true
+
+matrix_bridge_mautrix_android_sms_mms_provisioning_shared_secret: ''
+matrix_bridge_mautrix_android_sms_mms_public_media_signing_key: ''
+
+# matrix_bridge_mautrix_android_sms_mms_restart_necessary controls whether the service
+# will be restarted (when true) or merely started (when false) by the
+# systemd service manager role (when conditional restart is enabled).
+#
+# This value is automatically computed during installation based on whether
+# any configuration files, the systemd service file, or the container image changed.
+# The default of `false` means "no restart needed" — appropriate when the role's
+# installation tasks haven't run (e.g., due to --tags skipping them).
+matrix_bridge_mautrix_android_sms_mms_restart_necessary: false

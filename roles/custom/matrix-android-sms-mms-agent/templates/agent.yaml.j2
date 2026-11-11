@@ -1,0 +1,37 @@
+#jinja2: lstrip_blocks: True
+# android-sms-mms-adb-agent configuration.
+# See `docs/AGENT_API.md` in the project's repository for the HTTP API served by this agent.
+#
+# This file contains a bearer token — keep it private.
+
+# The `adb` binary to use.
+adb_path: {{ matrix_android_sms_mms_agent_adb_path | to_json }}
+# Selects the device (adb's `-s` argument). Leave empty to use the only attached device.
+serial: {{ matrix_android_sms_mms_agent_serial | to_json }}
+# The HTTP bind address.
+listen: {{ matrix_android_sms_mms_agent_listen | to_json }}
+# The bearer token required by all routes except `/v1/health`.
+token: {{ matrix_android_sms_mms_agent_token | to_json }}
+# The sweep interval in milliseconds.
+poll_interval_ms: {{ matrix_android_sms_mms_agent_poll_interval_ms | to_json }}
+# How far back each sweep re-reads, in milliseconds.
+sweep_overlap_ms: {{ matrix_android_sms_mms_agent_sweep_overlap_ms | to_json }}
+# Numbers to exclude from thread recipients (usually the phone's own number).
+own_numbers: {{ matrix_android_sms_mms_agent_own_numbers | to_json }}
+# Limits which SIM subscriptions are bridged. An empty list means all of them.
+sub_ids: {{ matrix_android_sms_mms_agent_sub_ids | to_json }}
+# Stores watermarks and dedupe state.
+data_dir: {{ matrix_android_sms_mms_agent_data_dir | to_json }}
+# Caps history pages returned per request.
+history_limit: {{ matrix_android_sms_mms_agent_history_limit | to_json }}
+# Outgoing message configuration.
+send:
+    enabled: {{ matrix_android_sms_mms_agent_send_enabled | to_json }}
+    # Overrides the `service call isms` transaction code (0 = auto-detect from the SDK).
+    isms_send_tx_code: {{ matrix_android_sms_mms_agent_send_isms_tx_code | to_json }}
+    # Permits splitting messages over 160 UTF-16 code units into multiple SMS.
+    allow_sms_split: {{ matrix_android_sms_mms_agent_send_allow_sms_split | to_json }}
+    # Passed to the telephony service as the calling package.
+    caller_package: {{ matrix_android_sms_mms_agent_send_caller_package | to_json }}
+    # How long a send waits for the provider row to appear, in milliseconds.
+    resolve_timeout_ms: {{ matrix_android_sms_mms_agent_send_resolve_timeout_ms | to_json }}

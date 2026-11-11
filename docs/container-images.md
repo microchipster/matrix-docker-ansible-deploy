@@ -100,6 +100,7 @@ Bridges can be used to connect your Matrix installation with third-party communi
 | mautrix-meta (for [Messenger](configuring-playbook-bridge-mautrix-meta-messenger.md) and [Instagram](configuring-playbook-bridge-mautrix-meta-instagram.md)) | [mautrix/meta](https://mau.dev/mautrix/meta/container_registry) | ❌ | Bridge to [Messenger](https://messenger.com/) and [Instagram](https://instagram.com/) |
 | [mautrix-signal](configuring-playbook-bridge-mautrix-signal.md) | [mautrix/signal](https://mau.dev/mautrix/signal/container_registry) | ❌ | Bridge to [Signal](https://www.signal.org/) |
 | [mautrix-jmpchat](configuring-playbook-bridge-mautrix-jmpchat.md) | Self-building | ❌ | Bridge to [JMP](https://jmp.chat/)/[Cheogram](https://cheogram.com/) XMPP |
+| [mautrix-android-sms-mms](configuring-playbook-bridge-mautrix-android-sms-mms.md) | Self-building | ❌ | Bridge to Android [SMS](https://en.wikipedia.org/wiki/SMS)/[MMS](https://en.wikipedia.org/wiki/MMS) |
 | [beeper-linkedin](configuring-playbook-bridge-beeper-linkedin.md) | [beeper/linkedin](https://ghcr.io/beeper/linkedin) | ❌ | Bridge to [LinkedIn](https://www.linkedin.com/) |
 | [beeper-line](configuring-playbook-bridge-beeper-line.md) | [crispyduck/beeper-line](https://hub.docker.com/r/crispyduck/beeper-line) | ❌ | Bridge to [LINE](https://line.me/) |
 | [matrix-appservice-irc](configuring-playbook-bridge-appservice-irc.md) | [matrixdotorg/matrix-appservice-irc](https://hub.docker.com/r/matrixdotorg/matrix-appservice-irc) | ❌ | Bridge to [IRC](https://wikipedia.org/wiki/Internet_Relay_Chat) |

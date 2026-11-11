@@ -1,0 +1,23 @@
+#jinja2: lstrip_blocks: True
+[Unit]
+Description=Android SMS/MMS adb agent
+{% for service in matrix_android_sms_mms_agent_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+{% for service in matrix_android_sms_mms_agent_systemd_wanted_services_list %}
+Wants={{ service }}
+{% endfor %}
+After=network.target
+
+[Service]
+Type=simple
+User={{ matrix_android_sms_mms_agent_user_name }}
+Group={{ matrix_android_sms_mms_agent_group_name }}
+ExecStart={{ matrix_android_sms_mms_agent_binary_path }}/{{ matrix_android_sms_mms_agent_binary_filename }} -c {{ matrix_android_sms_mms_agent_config_path }}/agent.yaml
+Restart=always
+RestartSec=30
+SyslogIdentifier=matrix-android-sms-mms-agent
+
+[Install]
+WantedBy=multi-user.target

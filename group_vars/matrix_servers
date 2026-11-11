@@ -202,6 +202,8 @@ matrix_homeserver_container_extra_arguments_auto: |
     +
     (['--mount type=bind,src=' + matrix_bridge_mautrix_jmpchat_config_path + '/registration.yaml,dst=/matrix-mautrix-jmpchat-registration.yaml,ro'] if matrix_bridge_mautrix_jmpchat_enabled else [])
     +
+    (['--mount type=bind,src=' + matrix_bridge_mautrix_android_sms_mms_config_path + '/registration.yaml,dst=/matrix-mautrix-android-sms-mms-registration.yaml,ro'] if matrix_bridge_mautrix_android_sms_mms_enabled else [])
+    +
     (['--mount type=bind,src=' + matrix_bridge_mautrix_meta_messenger_config_path + '/registration.yaml,dst=/matrix-mautrix-meta-messenger-registration.yaml,ro'] if matrix_bridge_mautrix_meta_messenger_enabled else [])
     +
     (['--mount type=bind,src=' + matrix_bridge_mautrix_meta_instagram_config_path + '/registration.yaml,dst=/matrix-mautrix-meta-instagram-registration.yaml,ro'] if matrix_bridge_mautrix_meta_instagram_enabled else [])
@@ -268,6 +270,8 @@ matrix_homeserver_app_service_config_files_auto: |
     (['/matrix-mautrix-signal-registration.yaml'] if matrix_bridge_mautrix_signal_enabled else [])
     +
     (['/matrix-mautrix-jmpchat-registration.yaml'] if matrix_bridge_mautrix_jmpchat_enabled else [])
+    +
+    (['/matrix-mautrix-android-sms-mms-registration.yaml'] if matrix_bridge_mautrix_android_sms_mms_enabled else [])
     +
     (['/matrix-mautrix-meta-messenger-registration.yaml'] if matrix_bridge_mautrix_meta_messenger_enabled else [])
     +
@@ -339,6 +343,8 @@ matrix_homeserver_app_service_registration_changed: |
       ([matrix_bridge_mautrix_googlechat_registration_result | default({})] if matrix_bridge_mautrix_googlechat_enabled else [])
       +
       ([matrix_bridge_mautrix_signal_registration_result | default({})] if matrix_bridge_mautrix_signal_enabled else [])
+      +
+      ([matrix_bridge_mautrix_android_sms_mms_registration_result | default({})] if matrix_bridge_mautrix_android_sms_mms_enabled else [])
       +
       ([matrix_bridge_mautrix_meta_messenger_registration_result | default({})] if matrix_bridge_mautrix_meta_messenger_enabled else [])
       +
@@ -656,6 +662,20 @@ devture_systemd_service_manager_services_list_auto: |
       'restart_necessary': (matrix_bridge_mautrix_jmpchat_restart_necessary | bool),
       'groups': ['matrix', 'bridges', 'mautrix-jmpchat', 'mautrix-jmpchat'],
     }] if matrix_bridge_mautrix_jmpchat_enabled else [])
+    +
+    ([{
+      'name': 'matrix-mautrix-android-sms-mms.service',
+      'priority': 2000,
+      'restart_necessary': (matrix_bridge_mautrix_android_sms_mms_restart_necessary | bool),
+      'groups': ['matrix', 'bridges', 'mautrix-android-sms-mms'],
+    }] if matrix_bridge_mautrix_android_sms_mms_enabled else [])
+    +
+    ([{
+      'name': 'matrix-android-sms-mms-agent.service',
+      'priority': 2000,
+      'restart_necessary': (matrix_android_sms_mms_agent_restart_necessary | bool),
+      'groups': ['android-sms-mms-agent'],
+    }] if matrix_android_sms_mms_agent_enabled else [])
     +
     ([{
       'name': 'matrix-invite-portal.service',
@@ -1294,6 +1314,26 @@ matrix_alertmanager_receiver_metrics_proxying_path: "{{ matrix_metrics_exposure_
 ######################################################################
 #
 # /matrix-alertmanager-receiver
+#
+######################################################################
+
+
+######################################################################
+#
+# matrix-android-sms-mms-agent
+#
+######################################################################
+
+# We don't enable the agent by default.
+#
+# Besides enabling it, you need to define `matrix_android_sms_mms_agent_token`
+# (there is no default secret) and make sure the agent host has adb (and USB) access
+# to the phone. See `docs/configuring-playbook-android-sms-mms-agent.md`.
+matrix_android_sms_mms_agent_enabled: false
+
+######################################################################
+#
+# /matrix-android-sms-mms-agent
 #
 ######################################################################
 
@@ -2163,6 +2203,96 @@ matrix_bridge_mautrix_jmpchat_public_media_signing_key: "{{ (matrix_homeserver_g
 ######################################################################
 #
 # /matrix-bridge-mautrix-jmpchat
+#
+######################################################################
+
+######################################################################
+#
+# matrix-bridge-mautrix-android-sms-mms
+#
+######################################################################
+
+# We don't enable bridges by default.
+matrix_bridge_mautrix_android_sms_mms_enabled: false
+
+matrix_bridge_mautrix_android_sms_mms_systemd_required_services_list_auto: |
+  {{
+    matrix_addons_homeserver_systemd_services_list
+    +
+    ([postgres_identifier ~ '.service'] if (postgres_enabled and matrix_bridge_mautrix_android_sms_mms_database_hostname == postgres_connection_hostname) else [])
+  }}
+
+matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream: "{{ matrix_container_global_registry_prefix_override if matrix_container_global_registry_prefix_override else matrix_bridge_mautrix_android_sms_mms_container_image_registry_prefix_upstream_default }}"
+
+matrix_bridge_mautrix_android_sms_mms_container_image_self_build: true
+
+matrix_bridge_mautrix_android_sms_mms_container_network: "{{ matrix_addons_container_network }}"
+
+matrix_bridge_mautrix_android_sms_mms_container_additional_networks_auto: |-
+  {{
+    (
+      ([] if matrix_addons_homeserver_container_network == '' else [matrix_addons_homeserver_container_network])
+      +
+      ([postgres_container_network] if (postgres_enabled and matrix_bridge_mautrix_android_sms_mms_database_hostname == postgres_connection_hostname and matrix_bridge_mautrix_android_sms_mms_container_network != postgres_container_network) else [])
+      +
+      ([matrix_playbook_reverse_proxyable_services_additional_network] if matrix_playbook_reverse_proxyable_services_additional_network and matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_enabled else [])
+    ) | unique
+  }}
+
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_enabled: "{{ matrix_playbook_reverse_proxy_type in ['playbook-managed-traefik', 'other-traefik-container'] }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_docker_network: "{{ matrix_playbook_reverse_proxyable_services_additional_network }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_entrypoints: "{{ traefik_entrypoint_primary }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_traefik_tls_certResolver: "{{ traefik_certResolver_primary }}"
+
+matrix_bridge_mautrix_android_sms_mms_pairing_scheme: "{{ 'https' if matrix_playbook_ssl_enabled else 'http' }}"
+
+# Publish the pairing/CDN API port on the host when requested via `matrix_playbook_service_host_bind_interface_prefix`.
+# This is only needed for reverse-proxy setups which are not Traefik-based and cannot use container labels.
+matrix_bridge_mautrix_android_sms_mms_container_http_host_bind_ports_defaultmapping:
+  - "{{ matrix_playbook_service_host_bind_interface_prefix }}{{ matrix_bridge_mautrix_android_sms_mms_pairing_port }}:{{ matrix_bridge_mautrix_android_sms_mms_pairing_port }}"
+
+matrix_bridge_mautrix_android_sms_mms_container_http_host_bind_ports: "{{ matrix_bridge_mautrix_android_sms_mms_container_http_host_bind_ports_defaultmapping if (matrix_playbook_service_host_bind_interface_prefix and (matrix_bridge_mautrix_android_sms_mms_pairing_enabled | bool or matrix_bridge_mautrix_android_sms_mms_cdn_enabled | bool)) else [] }}"
+
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_middleware_basic_auth_enabled: "{{ matrix_metrics_exposure_http_basic_auth_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_container_labels_metrics_middleware_basic_auth_users: "{{ matrix_metrics_exposure_http_basic_auth_users }}"
+
+matrix_bridge_mautrix_android_sms_mms_homeserver_domain: '{{ matrix_domain }}'
+matrix_bridge_mautrix_android_sms_mms_homeserver_address: "{{ matrix_addons_homeserver_client_api_url }}"
+matrix_bridge_mautrix_android_sms_mms_homeserver_token: "{{ (matrix_homeserver_generic_secret_key + ':androidsmsmms.hs.token') | hash('sha512') | to_uuid }}"
+
+matrix_bridge_mautrix_android_sms_mms_homeserver_async_media: "{{ matrix_homeserver_implementation in ['synapse'] }}"
+
+matrix_bridge_mautrix_android_sms_mms_appservice_token: "{{ (matrix_homeserver_generic_secret_key + ':androidsmsmms.as.token') | hash('sha512') | to_uuid }}"
+
+matrix_bridge_mautrix_android_sms_mms_double_puppet_secrets_auto: |-
+  {{
+    {
+      matrix_bridge_mautrix_android_sms_mms_homeserver_domain: ("as_token:" + matrix_appservice_double_puppet_registration_as_token)
+    }
+    if matrix_appservice_double_puppet_enabled
+    else {}
+  }}
+
+matrix_bridge_mautrix_android_sms_mms_metrics_enabled: "{{ prometheus_enabled or matrix_metrics_exposure_enabled }}"
+
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_enabled: "{{ matrix_bridge_mautrix_android_sms_mms_metrics_enabled and matrix_metrics_exposure_enabled }}"
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_hostname: "{{ matrix_metrics_exposure_hostname }}"
+matrix_bridge_mautrix_android_sms_mms_metrics_proxying_path_prefix: "{{ matrix_metrics_exposure_path_prefix }}/mautrix-android-sms-mms"
+
+matrix_bridge_mautrix_android_sms_mms_database_engine: "{{ 'postgres' if postgres_enabled else 'sqlite' }}"
+matrix_bridge_mautrix_android_sms_mms_database_hostname: "{{ postgres_connection_hostname if postgres_enabled else '' }}"
+matrix_bridge_mautrix_android_sms_mms_database_password: "{{ (matrix_homeserver_generic_secret_key + ':mau.androidsmsmms.db') | hash('sha512') | to_uuid }}"
+
+matrix_bridge_mautrix_android_sms_mms_provisioning_shared_secret: "{{ (matrix_homeserver_generic_secret_key + ':mau.androidsmsmms.prov') | hash('sha512') | to_uuid }}"
+matrix_bridge_mautrix_android_sms_mms_public_media_signing_key: "{{ (matrix_homeserver_generic_secret_key + ':mau.androidsmsmms.pmed') | hash('sha512') | to_uuid }}"
+
+# Pre-fill the bridge's login flow with the bearer token of the local agent role,
+# so that a deployment using both components configures the token only once.
+matrix_bridge_mautrix_android_sms_mms_default_agent_token: "{{ matrix_android_sms_mms_agent_token }}"
+
+######################################################################
+#
+# /matrix-bridge-mautrix-android-sms-mms
 #
 ######################################################################
 
@@ -4712,6 +4842,12 @@ postgres_managed_databases_auto: |
     }] if (matrix_bridge_mautrix_jmpchat_enabled and matrix_bridge_mautrix_jmpchat_database_engine == 'postgres' and matrix_bridge_mautrix_jmpchat_database_hostname == postgres_connection_hostname) else [])
     +
     ([{
+      'name': matrix_bridge_mautrix_android_sms_mms_database_name,
+      'username': matrix_bridge_mautrix_android_sms_mms_database_username,
+      'password': matrix_bridge_mautrix_android_sms_mms_database_password,
+    }] if (matrix_bridge_mautrix_android_sms_mms_enabled and matrix_bridge_mautrix_android_sms_mms_database_engine == 'postgres' and matrix_bridge_mautrix_android_sms_mms_database_hostname == postgres_connection_hostname) else [])
+    +
+    ([{
       'name': matrix_bridge_mautrix_meta_messenger_database_name,
       'username': matrix_bridge_mautrix_meta_messenger_database_username,
       'password': matrix_bridge_mautrix_meta_messenger_database_password,
@@ -5750,6 +5886,11 @@ matrix_ketesa_config_asManagedUsers_auto: |
     ] if matrix_bridge_mautrix_jmpchat_enabled else [])
     +
     ([
+      '^@'+(matrix_bridge_mautrix_android_sms_mms_appservice_bot_username | default('') | regex_escape)+':'+(matrix_domain | regex_escape)+'$',
+      '^@android-sms-mms_[a-zA-Z0-9=.-]+:'+(matrix_domain | regex_escape)+'$',
+    ] if matrix_bridge_mautrix_android_sms_mms_enabled else [])
+    +
+    ([
       '^@'+(matrix_bridge_mautrix_slack_appservice_bot_username | default('') | regex_escape)+':'+(matrix_domain | regex_escape)+'$',
       '^@slack_[a-zA-Z0-9\-]+:'+(matrix_domain | regex_escape)+'$',
     ] if matrix_bridge_mautrix_slack_enabled else [])
@@ -6634,6 +6775,18 @@ matrix_static_files_file_matrix_mautrix_property_fi_mau_bridges_auto: |-
       matrix_bridge_mautrix_twitter_appservice_public_address if (matrix_bridge_mautrix_twitter_enabled and matrix_bridge_mautrix_twitter_container_labels_traefik_enabled and matrix_bridge_mautrix_twitter_container_labels_exposure_enabled) else '',
       matrix_bridge_mautrix_whatsapp_bridge_public_address if (matrix_bridge_mautrix_whatsapp_enabled and matrix_bridge_mautrix_whatsapp_container_labels_traefik_enabled and matrix_bridge_mautrix_whatsapp_container_labels_exposure_enabled) else '',
     ] | select | list
+  }}
+
+# Advertise the mautrix-android-sms-mms app pairing API, so that the Fossify Messages bridge app
+# can discover the bridge URL (see the project's docs/PAIRING_PROTOCOL.md).
+matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_auto: |-
+  {{
+    {
+      'url': matrix_bridge_mautrix_android_sms_mms_pairing_public_url,
+      'protocol_version': 1
+    }
+    if (matrix_bridge_mautrix_android_sms_mms_enabled | bool and matrix_bridge_mautrix_android_sms_mms_pairing_enabled | bool)
+    else {}
   }}
 
 matrix_static_files_file_matrix_server_property_m_server: "{{ matrix_server_fqn_matrix_federation }}:{{ matrix_federation_public_port }}"

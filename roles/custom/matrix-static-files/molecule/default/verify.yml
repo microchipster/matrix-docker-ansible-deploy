@@ -182,6 +182,8 @@
           - matrix_static_files_served_documents.client['io.element.e2ee'].force_disable == true
           - matrix_static_files_served_documents.client['cc.etke.ketesa'].marker == 'ketesa-custom'
           - matrix_static_files_served_documents.client['org.matrix.msc4143.rtc_foci'][0].livekit_service_url == 'https://livekit.molecule.invalid'
+          - matrix_static_files_served_documents.client['chat.mdad.bridge.sms_mms'].url == 'https://bridge.molecule.invalid'
+          - matrix_static_files_served_documents.client['chat.mdad.bridge.sms_mms'].protocol_version == 1
         fail_msg: "The client document does not carry the configured discovery sections"
         success_msg: "The client document carries the configured discovery sections"
 

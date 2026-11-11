@@ -228,6 +228,17 @@ matrix_static_files_file_matrix_client_property_cc_etke_ketesa: "{{ matrix_stati
 matrix_static_files_file_matrix_client_property_cc_etke_ketesa_auto: {}
 matrix_static_files_file_matrix_client_property_cc_etke_ketesa_custom: {}
 
+# Controls whether `chat.mdad.bridge.sms_mms`-related entries should be added to the client well-known.
+# By default, if there are entries in `matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms`, we show them (by enabling this).
+matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_enabled: "{{ matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms | default({}) | dict2items | length > 0 }}"
+
+# Controls the chat.mdad.bridge.sms_mms property in the /.well-known/matrix/client file.
+# This is used by the mautrix-android-sms-mms bridge to advertise its app pairing API, so that the phone app can discover it.
+# See `matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_enabled`.
+matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms: "{{ matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_auto | combine(matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_custom, recursive=True) }}"
+matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_auto: {}
+matrix_static_files_file_matrix_client_property_chat_mdad_bridge_sms_mms_custom: {}
+
 
 # The `org.matrix.msc4143.rtc_foci` property has been dropped from MSC4143 in favor of the homeserver's own RTC transports API,
 # but remains the only way to reach clients which cannot consult that API.
