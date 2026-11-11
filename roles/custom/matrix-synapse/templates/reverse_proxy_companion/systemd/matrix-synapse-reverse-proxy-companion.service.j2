@@ -18,7 +18,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_sh }} -c '{{ matrix_syn
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
 			--rm \
 			--name=matrix-synapse-reverse-proxy-companion \
-			--log-driver=none \
+			--log-driver=json-file --log-opt max-size=10m --log-opt max-file=2 \
 			--user={{ matrix_user_uid }}:{{ matrix_user_gid }} \
 			--cap-drop=ALL \
 			--read-only \

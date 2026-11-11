@@ -42,14 +42,14 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_sh }} -c '{{ matrix_syn
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
 			--rm \
 			--name={{ matrix_synapse_worker_container_name }} \
-			--log-driver=none \
+			--log-driver=json-file --log-opt max-size=10m --log-opt max-file=2 \
 			--user={{ matrix_synapse_uid }}:{{ matrix_synapse_gid }} \
 			--cap-drop=ALL \
 			--read-only \
 			--tmpfs=/tmp:rw,noexec,nosuid,size={{ matrix_synapse_tmp_directory_size_mb }}m \
 			--network={{ matrix_synapse_container_network }} \
 			{% if matrix_synapse_worker_details.port != 0 and matrix_synapse_worker_details.webserving %}
-			--health-cmd 'curl -fSs http://localhost:{{ matrix_synapse_worker_details.port }}/health || exit 1' \
+			--health-cmd 'curl --connect-timeout 2 --max-time 4 -fSs http://localhost:{{ matrix_synapse_worker_details.port }}/health || exit 1' \
 			{% else %}
 			--no-healthcheck \
 			{% endif %}
